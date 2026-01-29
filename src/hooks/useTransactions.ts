@@ -62,36 +62,42 @@ export function useTransactions() {
     };
   }, []);
 
-  const getWeeklySummary = useCallback((): TransactionSummary => {
-    const now = new Date();
-    const filtered = getFilteredTransactions(startOfWeek(now, { weekStartsOn: 0 }), endOfWeek(now, { weekStartsOn: 0 }));
+  // Get summary for a specific week
+  const getWeekSummary = useCallback((weekStart: Date): TransactionSummary => {
+    const filtered = getFilteredTransactions(
+      startOfWeek(weekStart, { weekStartsOn: 0 }), 
+      endOfWeek(weekStart, { weekStartsOn: 0 })
+    );
     return getSummary(filtered);
   }, [getFilteredTransactions, getSummary]);
 
-  const getMonthlySummary = useCallback((): TransactionSummary => {
-    const now = new Date();
-    const filtered = getFilteredTransactions(startOfMonth(now), endOfMonth(now));
+  // Get summary for a specific month
+  const getMonthSummary = useCallback((monthDate: Date): TransactionSummary => {
+    const filtered = getFilteredTransactions(startOfMonth(monthDate), endOfMonth(monthDate));
     return getSummary(filtered);
   }, [getFilteredTransactions, getSummary]);
 
-  const getWeeklyTransactions = useCallback((): Transaction[] => {
-    const now = new Date();
-    return getFilteredTransactions(startOfWeek(now, { weekStartsOn: 0 }), endOfWeek(now, { weekStartsOn: 0 }));
+  // Get transactions for a specific week
+  const getWeekTransactions = useCallback((weekStart: Date): Transaction[] => {
+    return getFilteredTransactions(
+      startOfWeek(weekStart, { weekStartsOn: 0 }), 
+      endOfWeek(weekStart, { weekStartsOn: 0 })
+    );
   }, [getFilteredTransactions]);
 
-  const getMonthlyTransactions = useCallback((): Transaction[] => {
-    const now = new Date();
-    return getFilteredTransactions(startOfMonth(now), endOfMonth(now));
+  // Get transactions for a specific month
+  const getMonthTransactions = useCallback((monthDate: Date): Transaction[] => {
+    return getFilteredTransactions(startOfMonth(monthDate), endOfMonth(monthDate));
   }, [getFilteredTransactions]);
 
   return {
     transactions,
     addTransaction,
     deleteTransaction,
-    getWeeklySummary,
-    getMonthlySummary,
-    getWeeklyTransactions,
-    getMonthlyTransactions,
+    getWeekSummary,
+    getMonthSummary,
+    getWeekTransactions,
+    getMonthTransactions,
     getSummary,
   };
 }
