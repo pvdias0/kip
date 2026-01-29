@@ -1,9 +1,11 @@
 import { useTransactions } from '@/hooks/useTransactions';
 import { TransactionForm } from '@/components/TransactionForm';
 import { PeriodTabs } from '@/components/PeriodTabs';
-import { Wallet } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Wallet, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 
 const Index = () => {
   const { addTransaction, deleteTransaction } = useTransactions();
@@ -25,7 +27,15 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground capitalize">{today}</p>
               </div>
             </div>
-            <TransactionForm onSubmit={addTransaction} />
+            <div className="flex items-center gap-3">
+              <Link to="/dashboard">
+                <Button variant="outline" className="gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                </Button>
+              </Link>
+              <TransactionForm onSubmit={addTransaction} />
+            </div>
           </div>
         </div>
       </header>
