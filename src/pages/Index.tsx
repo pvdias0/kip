@@ -6,19 +6,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const Index = () => {
-  const {
-    addTransaction,
-    deleteTransaction,
-    getWeeklySummary,
-    getMonthlySummary,
-    getWeeklyTransactions,
-    getMonthlyTransactions,
-  } = useTransactions();
-
-  const weeklySummary = getWeeklySummary();
-  const monthlySummary = getMonthlySummary();
-  const weeklyTransactions = getWeeklyTransactions();
-  const monthlyTransactions = getMonthlyTransactions();
+  const { addTransaction, deleteTransaction } = useTransactions();
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
 
@@ -44,13 +32,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <PeriodTabs
-          weeklySummary={weeklySummary}
-          monthlySummary={monthlySummary}
-          weeklyTransactions={weeklyTransactions}
-          monthlyTransactions={monthlyTransactions}
-          onDeleteTransaction={deleteTransaction}
-        />
+        <PeriodTabs onDeleteTransaction={deleteTransaction} />
       </main>
 
       {/* Footer */}
