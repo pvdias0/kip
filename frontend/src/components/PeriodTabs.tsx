@@ -5,6 +5,7 @@ import { SummaryCard } from './SummaryCard';
 import { TransactionList } from './TransactionList';
 import { MonthNavigator } from './MonthNavigator';
 import { WeekSelector } from './WeekSelector';
+import { WeeklyBreakdown } from './WeeklyBreakdown';
 import { TrendingUp, TrendingDown, Wallet } from 'lucide-react';
 import { addMonths, subMonths, startOfMonth, isSameMonth, startOfWeek } from 'date-fns';
 import { useTransactions } from '@/hooks/useTransactions';
@@ -91,6 +92,12 @@ export function PeriodTabs({ onDeleteTransaction }: PeriodTabsProps) {
               icon={Wallet}
             />
           </div>
+          
+          <WeeklyBreakdown 
+            transactions={weekTransactions} 
+            weekStart={selectedWeek}
+          />
+          
           <TransactionList
             transactions={weekTransactions}
             onDelete={onDeleteTransaction}

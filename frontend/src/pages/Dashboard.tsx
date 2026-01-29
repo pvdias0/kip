@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useTransactions } from '@/hooks/useTransactions';
 import { useTransactionStats } from '@/hooks/useTransactionStats';
+import { useAuth } from '@/contexts/AuthContext';
 import { MonthNavigator } from '@/components/MonthNavigator';
 import { RankingList } from '@/components/RankingList';
 import { CategoryChart } from '@/components/CategoryChart';
 import { SummaryCard } from '@/components/SummaryCard';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, TrendingUp, TrendingDown, Wallet, BarChart3 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ArrowLeft, TrendingUp, TrendingDown, Wallet, BarChart3, LogOut } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { addMonths, subMonths, isSameMonth } from 'date-fns';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -15,6 +16,8 @@ import { ptBR } from 'date-fns/locale';
 const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const { transactions } = useTransactions();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   
   const stats = useTransactionStats(transactions, selectedMonth);
   
@@ -29,6 +32,11 @@ const Dashboard = () => {
     if (canGoNext) {
       setSelectedMonth(addMonths(selectedMonth, 1));
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
@@ -48,12 +56,26 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground capitalize">{today}</p>
               </div>
             </div>
-            <Link to="/">
-              <Button variant="outline" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Voltar
+            <div className="flex items-center gap-3">
+              <div className="hidden md:block text-right">
+                <p className="text-sm font-medium text-foreground">{user?.fullName}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </div>
+              <Link to="/">
+                <Button variant="outline" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                title="Sair"
+              >
+                <LogOut className="h-4 w-4" />
               </Button>
-            </Link>
+            </div>
           </div>
         </div>
       </header>

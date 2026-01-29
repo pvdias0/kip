@@ -1,16 +1,24 @@
 import { useTransactions } from '@/hooks/useTransactions';
+import { useAuth } from '@/contexts/AuthContext';
 import { TransactionForm } from '@/components/TransactionForm';
 import { PeriodTabs } from '@/components/PeriodTabs';
 import { Button } from '@/components/ui/button';
-import { Wallet, BarChart3 } from 'lucide-react';
+import { Wallet, BarChart3, LogOut } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const { addTransaction, deleteTransaction } = useTransactions();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,6 +36,10 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <div className="hidden md:block text-right">
+                <p className="text-sm font-medium text-foreground">{user?.fullName}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
+              </div>
               <Link to="/dashboard">
                 <Button variant="outline" className="gap-2">
                   <BarChart3 className="h-4 w-4" />
@@ -35,6 +47,14 @@ const Index = () => {
                 </Button>
               </Link>
               <TransactionForm onSubmit={addTransaction} />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                title="Sair"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
