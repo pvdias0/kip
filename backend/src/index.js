@@ -3,6 +3,8 @@ import cors from "cors";
 import helmet from "helmet";
 import dotenv from "dotenv";
 import http from "http";
+import path from "path";
+import { fileURLToPath } from "url";
 import pool, { testConnection } from "./config/database.js";
 import { errorHandler } from "./middleware/auth.js";
 import { initializeSocket } from "./utils/socket.js";
@@ -12,6 +14,9 @@ import authRoutes from "./routes/auth.js";
 import categoriesRoutes from "./routes/categories.js";
 import entriesRoutes from "./routes/entries.js";
 import passwordResetRoutes from "./routes/passwordReset.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -61,12 +66,13 @@ app.use("/api/auth", passwordResetRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/entries", entriesRoutes);
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    status: "ERROR",
-    message: "Rota não encontrada",
-  });
+// Serve static files from frontend build directory
+const frontendPath = path.join(__dirname, "../../frontend/dist");
+app.use(express.static(frontendPath));
+
+// SPA fallback - serve index.html for all non-API routes
+app.get("*", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
 });
 
 // Error handler
