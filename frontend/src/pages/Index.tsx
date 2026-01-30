@@ -21,64 +21,64 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-primary p-2">
-                <Wallet className="h-6 w-6 text-primary-foreground" />
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+              <div className="rounded-lg sm:rounded-xl bg-primary p-1.5 sm:p-2 flex-shrink-0">
+                <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-lg md:text-xl font-bold text-foreground truncate">
                   Minhas Finanças
                 </h1>
-                <p className="text-sm text-muted-foreground capitalize">
+                <p className="text-xs sm:text-sm text-muted-foreground capitalize truncate">
                   {today}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden md:block text-right">
-                <p className="text-sm font-medium text-foreground">
-                  {user?.username}
-                </p>
-              </div>
+            <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
               <Link to="/dashboard">
-                <Button variant="outline" className="gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Dashboard</span>
+                <Button variant="ghost" size="icon" title="Dashboard" className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10">
+                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
               <Link to="/categories">
-                <Button variant="outline" className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  <span className="hidden sm:inline">Categorias</span>
+                <Button variant="ghost" size="icon" title="Categorias" className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10">
+                  <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
-              <TransactionForm onSubmit={addTransaction} />
+              <div className="hidden xs:flex">
+                <TransactionForm onSubmit={addTransaction} />
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleLogout}
                 title="Sair"
+                className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
+          </div>
+          {/* Mobile button - below header on small screens */}
+          <div className="flex xs:hidden mt-3">
+            <TransactionForm onSubmit={addTransaction} />
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 flex-1">
         <PeriodTabs onDeleteTransaction={deleteTransaction} />
       </main>
 
       {/* Footer */}
-      <footer className="border-t py-6 mt-auto">
-        <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
+      <footer className="border-t py-4 sm:py-6 mt-auto">
+        <div className="container mx-auto px-3 sm:px-4 text-center text-xs sm:text-sm text-muted-foreground">
           <p>Organize suas finanças de forma simples e eficiente</p>
         </div>
       </footer>

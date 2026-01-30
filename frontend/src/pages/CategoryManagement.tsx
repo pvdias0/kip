@@ -75,22 +75,22 @@ export default function CategoryManagement() {
   const userCategories = categories.filter((c) => c.user_id !== null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background">
-      <div className="max-w-2xl mx-auto p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex flex-col">
+      <div className="max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-8 w-full flex-1">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate("/")}
-              className="rounded-full"
+              className="rounded-full h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Categorias</h1>
-              <p className="text-muted-foreground">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-3xl font-bold truncate">Categorias</h1>
+              <p className="text-xs sm:text-base text-muted-foreground truncate">
                 Gerencie suas categorias de transações
               </p>
             </div>
@@ -99,73 +99,74 @@ export default function CategoryManagement() {
 
         {/* Messages */}
         {successMessage && (
-          <Alert className="mb-4 bg-green-50 border-green-200">
-            <AlertCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-800">
+          <Alert className="mb-3 sm:mb-4 bg-green-50 border-green-200">
+            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
+            <AlertDescription className="text-xs sm:text-sm text-green-800">
               {successMessage}
             </AlertDescription>
           </Alert>
         )}
 
         {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="mb-3 sm:mb-4">
+            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <AlertDescription className="text-xs sm:text-sm">{error}</AlertDescription>
           </Alert>
         )}
 
         {deleteError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{deleteError}</AlertDescription>
+          <Alert variant="destructive" className="mb-3 sm:mb-4">
+            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <AlertDescription className="text-xs sm:text-sm">{deleteError}</AlertDescription>
           </Alert>
         )}
 
         {createError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{createError}</AlertDescription>
+          <Alert variant="destructive" className="mb-3 sm:mb-4">
+            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <AlertDescription className="text-xs sm:text-sm">{createError}</AlertDescription>
           </Alert>
         )}
 
         {/* Create New Category */}
-        <Card className="mb-6 shadow-md">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Nova Categoria
+        <Card className="mb-4 sm:mb-6 shadow-md">
+          <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Plus className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+              <span>Nova Categoria</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Crie uma categoria personalizada para suas transações
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAddCategory} className="space-y-4">
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-4">
+            <form onSubmit={handleAddCategory} className="space-y-3 sm:space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="categoryName">Nome da Categoria</Label>
-                <div className="flex gap-2">
+                <Label htmlFor="categoryName" className="text-xs sm:text-sm">Nome da Categoria</Label>
+                <div className="flex gap-1 sm:gap-2 flex-col xs:flex-row">
                   <Input
                     id="categoryName"
                     placeholder="Ex: Compras online"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     disabled={isCreating}
-                    className="flex-1"
+                    className="flex-1 text-xs sm:text-base"
                   />
                   <Button
                     type="submit"
                     disabled={isCreating || !newCategoryName.trim()}
-                    className="gap-2"
+                    className="gap-1 sm:gap-2 w-full xs:w-auto text-xs sm:text-base"
                   >
                     {isCreating ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Criando...
+                        <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                        <span className="hidden xs:inline">Criando...</span>
+                        <span className="xs:hidden">Criar</span>
                       </>
                     ) : (
                       <>
-                        <Plus className="h-4 w-4" />
-                        Criar
+                        <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span>Criar</span>
                       </>
                     )}
                   </Button>
@@ -177,8 +178,8 @@ export default function CategoryManagement() {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-8 sm:py-12">
+            <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-muted-foreground" />
           </div>
         )}
 
@@ -186,8 +187,8 @@ export default function CategoryManagement() {
           <>
             {/* Default Categories */}
             {defaultCategories.length > 0 && (
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold mb-3 text-muted-foreground">
+              <div className="mb-4 sm:mb-6">
+                <h2 className="text-sm sm:text-lg font-semibold mb-2 sm:mb-3 text-muted-foreground">
                   Categorias Padrão
                 </h2>
                 <Card className="shadow-md">
@@ -196,11 +197,11 @@ export default function CategoryManagement() {
                       {defaultCategories.map((category) => (
                         <div
                           key={category.id}
-                          className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                          className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 xs:gap-4 p-3 xs:p-4 hover:bg-muted/50 transition-colors"
                         >
-                          <div>
-                            <p className="font-medium">{category.name}</p>
-                            <p className="text-sm text-muted-foreground">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-xs sm:text-base truncate">{category.name}</p>
+                            <p className="text-xs text-muted-foreground">
                               Categoria padrão
                             </p>
                           </div>
@@ -209,22 +210,22 @@ export default function CategoryManagement() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full xs:w-auto h-8"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogTitle>
+                            <AlertDialogContent className="w-[95vw] sm:max-w-sm mx-auto">
+                              <AlertDialogTitle className="text-base sm:text-lg">
                                 Deletar categoria?
                               </AlertDialogTitle>
-                              <AlertDialogDescription>
+                              <AlertDialogDescription className="text-xs sm:text-sm">
                                 Tem certeza que deseja deletar a categoria "
                                 {category.name}"? Esta ação não pode ser
                                 desfeita.
                               </AlertDialogDescription>
                               <div className="flex justify-end gap-2">
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogCancel className="text-xs sm:text-sm">Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() =>
                                     handleDeleteCategory(
@@ -232,7 +233,7 @@ export default function CategoryManagement() {
                                       category.name,
                                     )
                                   }
-                                  className="bg-destructive hover:bg-destructive/90"
+                                  className="bg-destructive hover:bg-destructive/90 text-xs sm:text-sm"
                                 >
                                   Deletar
                                 </AlertDialogAction>
@@ -250,7 +251,7 @@ export default function CategoryManagement() {
             {/* User Categories */}
             {userCategories.length > 0 && (
               <div>
-                <h2 className="text-lg font-semibold mb-3">
+                <h2 className="text-sm sm:text-lg font-semibold mb-2 sm:mb-3">
                   Minhas Categorias
                 </h2>
                 <Card className="shadow-md">
@@ -259,11 +260,11 @@ export default function CategoryManagement() {
                       {userCategories.map((category) => (
                         <div
                           key={category.id}
-                          className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                          className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 xs:gap-4 p-3 xs:p-4 hover:bg-muted/50 transition-colors"
                         >
-                          <div>
-                            <p className="font-medium">{category.name}</p>
-                            <p className="text-sm text-muted-foreground">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-xs sm:text-base truncate">{category.name}</p>
+                            <p className="text-xs text-muted-foreground">
                               Criada em{" "}
                               {new Date(category.created_at).toLocaleDateString(
                                 "pt-BR",
@@ -275,22 +276,22 @@ export default function CategoryManagement() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full xs:w-auto h-8"
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogTitle>
+                            <AlertDialogContent className="w-[95vw] sm:max-w-sm mx-auto">
+                              <AlertDialogTitle className="text-base sm:text-lg">
                                 Deletar categoria?
                               </AlertDialogTitle>
-                              <AlertDialogDescription>
+                              <AlertDialogDescription className="text-xs sm:text-sm">
                                 Tem certeza que deseja deletar a categoria "
                                 {category.name}"? Esta ação não pode ser
                                 desfeita.
                               </AlertDialogDescription>
                               <div className="flex justify-end gap-2">
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogCancel className="text-xs sm:text-sm">Cancelar</AlertDialogCancel>
                                 <AlertDialogAction
                                   onClick={() =>
                                     handleDeleteCategory(
@@ -298,7 +299,7 @@ export default function CategoryManagement() {
                                       category.name,
                                     )
                                   }
-                                  className="bg-destructive hover:bg-destructive/90"
+                                  className="bg-destructive hover:bg-destructive/90 text-xs sm:text-sm"
                                 >
                                   Deletar
                                 </AlertDialogAction>
@@ -316,8 +317,8 @@ export default function CategoryManagement() {
             {/* Empty State */}
             {categories.length === 0 && (
               <Card className="shadow-md">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground mb-4">
+                <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12">
+                  <p className="text-xs sm:text-base text-muted-foreground mb-4">
                     Nenhuma categoria encontrada
                   </p>
                 </CardContent>

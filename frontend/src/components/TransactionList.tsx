@@ -46,17 +46,17 @@ export function TransactionList({
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">{title}</CardTitle>
+          <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <div className="rounded-full bg-muted p-4 mb-4">
-              <Calendar className="h-8 w-8 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center py-6 sm:py-8 text-center">
+            <div className="rounded-full bg-muted p-3 sm:p-4 mb-3 sm:mb-4">
+              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Nenhuma transação encontrada
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Adicione sua primeira transação acima
             </p>
           </div>
@@ -67,56 +67,56 @@ export function TransactionList({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
+      <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+        <CardTitle className="text-base sm:text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-0 overflow-hidden">
         <ScrollArea className="w-full" style={{ height: maxHeight }}>
-          <div className="px-6 py-4 space-y-3">
+          <div className="px-3 sm:px-6 py-3 sm:py-4 space-y-2 sm:space-y-3">
             {transactions.map((transaction) => (
               <div
                 key={transaction.id}
                 className={cn(
-                  "flex items-center justify-between p-4 rounded-xl transition-all hover:shadow-md",
+                  "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg sm:rounded-xl transition-all hover:shadow-md",
                   transaction.type === "income"
                     ? "bg-income-muted border border-income/10"
                     : "bg-expense-muted border border-expense/10",
                 )}
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
                   <div
                     className={cn(
-                      "rounded-full p-2",
+                      "rounded-full p-1.5 sm:p-2 flex-shrink-0",
                       transaction.type === "income"
                         ? "bg-income/10 text-income"
                         : "bg-expense/10 text-expense",
                     )}
                   >
                     {transaction.type === "income" ? (
-                      <TrendingUp className="h-4 w-4" />
+                      <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
                     ) : (
-                      <TrendingDown className="h-4 w-4" />
+                      <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
                     )}
                   </div>
-                  <div>
-                    <p className="font-medium text-foreground">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-xs sm:text-base text-foreground truncate">
                       {transaction.description}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="bg-muted px-2 py-0.5 rounded-full">
+                    <div className="flex items-center gap-1 sm:gap-2 text-xs text-muted-foreground flex-wrap">
+                      <span className="bg-muted px-1.5 sm:px-2 py-0.5 rounded-full text-xs">
                         {transaction.category_id
                           ? `#${transaction.category_id}`
                           : "Sem categoria"}
                       </span>
-                      <span>•</span>
+                      <span className="hidden sm:inline">•</span>
                       <span>{formatDate(transaction.date)}</span>
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
                   <span
                     className={cn(
-                      "font-semibold",
+                      "font-semibold text-xs sm:text-base whitespace-nowrap",
                       transaction.type === "income"
                         ? "text-income"
                         : "text-expense",
@@ -135,26 +135,26 @@ export function TransactionList({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogTitle>Deletar transação?</AlertDialogTitle>
-                      <AlertDialogDescription>
+                    <AlertDialogContent className="w-[95vw] sm:max-w-sm mx-auto">
+                      <AlertDialogTitle className="text-base sm:text-lg">Deletar transação?</AlertDialogTitle>
+                      <AlertDialogDescription className="text-xs sm:text-sm">
                         Tem certeza que deseja deletar a transação "
                         {transaction.description}"? Esta ação não pode ser
                         desfeita.
                       </AlertDialogDescription>
                       <div className="flex justify-end gap-2">
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogCancel className="text-xs sm:text-sm">Cancelar</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => {
                             onDelete(transaction.id);
                             setOpenDelete(null);
                           }}
-                          className="bg-destructive hover:bg-destructive/90"
+                          className="bg-destructive hover:bg-destructive/90 text-xs sm:text-sm"
                         >
                           Deletar
                         </AlertDialogAction>

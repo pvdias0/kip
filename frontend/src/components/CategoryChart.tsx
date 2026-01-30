@@ -39,14 +39,14 @@ export function CategoryChart({
   if (data.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <PieChartIcon className="h-5 w-5" />
-            {title}
+        <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+            <PieChartIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="truncate">{title}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-muted-foreground py-8">
+          <p className="text-center text-muted-foreground text-xs sm:text-sm py-6 sm:py-8">
             {emptyMessage}
           </p>
         </CardContent>
@@ -56,22 +56,22 @@ export function CategoryChart({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <PieChartIcon className="h-5 w-5" />
-          {title}
+      <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+        <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+          <PieChartIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+          <span className="truncate">{title}</span>
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="h-[280px]">
+      <CardContent className="px-3 sm:px-6">
+        <div className="h-[200px] sm:h-[250px] lg:h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={100}
+                innerRadius={40}
+                outerRadius={70}
                 paddingAngle={2}
                 dataKey="amount"
                 nameKey="category"
@@ -90,10 +90,12 @@ export function CategoryChart({
                   backgroundColor: "hsl(var(--card))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
+                  fontSize: "12px",
                 }}
               />
               <Legend
-                formatter={(value) => <span className="text-sm">{value}</span>}
+                formatter={(value) => <span className="text-xs sm:text-sm">{value}</span>}
+                wrapperStyle={{ paddingTop: "8px" }}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -104,20 +106,20 @@ export function CategoryChart({
           {data.map((item, index) => (
             <div
               key={item.category}
-              className="flex items-center justify-between text-sm"
+              className="flex items-center justify-between text-xs sm:text-sm p-2 rounded hover:bg-muted/50 transition-colors"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div
-                  className="w-3 h-3 rounded-full"
+                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0"
                   style={{ backgroundColor: colors[index % colors.length] }}
                 />
-                <span>{item.category}</span>
+                <span className="truncate">{item.category}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 ml-2">
                 <span className="text-muted-foreground">
                   {((item.amount / total) * 100).toFixed(1)}%
                 </span>
-                <span className="font-medium">
+                <span className="font-medium whitespace-nowrap">
                   {formatCurrency(item.amount)}
                 </span>
               </div>
