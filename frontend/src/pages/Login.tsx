@@ -34,7 +34,10 @@ export default function Login() {
       await login(username, password);
       navigate("/");
     } catch (err) {
-      setError("Usuário ou senha inválidos");
+      console.error("Login page caught error:", err);
+      setError(
+        err instanceof Error ? err.message : "Ocorreu um erro durante o login",
+      );
     }
   };
 

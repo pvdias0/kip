@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:2050";
+const SOCKET_URL = "https://kip.pvapps.com.br";
 
 interface SocketEvents {
   "transaction:created": (transaction: Record<string, unknown>) => void;

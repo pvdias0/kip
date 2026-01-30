@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:2050/api";
+const API_BASE_URL = "https://kip.pvapps.com.br/api";
 
 class ApiService {
   private token: string | null = null;

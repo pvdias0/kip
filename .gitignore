@@ -67,3 +67,5 @@ credentials.json
 tmp/
 temp/
 *.tmp
+
+*.yml

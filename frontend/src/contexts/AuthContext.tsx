@@ -47,11 +47,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
 
       const response = await apiService.login(username, password);
+      console.log("Login response:", response);
 
       const { user: userData, token: newToken } = response;
 
-      setUser(userData);
-      setToken(newToken);
+      if (!userData || !newToken) {
+        throw new Error("Resposta inválida do servidor");
+      }
+
+      setUser(userData as User);
+      setToken(newToken as string);
       apiService.setToken(newToken);
       localStorage.setItem("auth_token", newToken);
       localStorage.setItem("auth_user", JSON.stringify(userData));
