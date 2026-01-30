@@ -1,22 +1,34 @@
+import { useState } from "react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { TransactionForm } from "@/components/TransactionForm";
 import { PeriodTabs } from "@/components/PeriodTabs";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Wallet, BarChart3, Settings, LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link, useNavigate } from "react-router-dom";
 
 const Index = () => {
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const { addTransaction, deleteTransaction } = useTransactions();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
 
-  const handleLogout = () => {
+  const handleLogoutConfirm = () => {
     logout();
+    setIsLogoutDialogOpen(false);
     navigate("/login");
   };
 
@@ -56,7 +68,7 @@ const Index = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleLogout}
+                onClick={() => setIsLogoutDialogOpen(true)}
                 title="Sair"
                 className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10"
               >
@@ -70,6 +82,24 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja sair?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você será redirecionado para a página de login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogoutConfirm}>
+              Sair
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 flex-1">
