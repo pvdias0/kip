@@ -43,14 +43,8 @@ export function useSocket() {
     const token = localStorage.getItem("auth_token");
 
     if (!token) {
-      console.warn("[Socket] ❌ Token não disponível em localStorage");
       return;
     }
-
-    console.log(
-      "[Socket] 🔐 Token encontrado (primeiros 20 chars):",
-      token.substring(0, 20) + "...",
-    );
 
     // Criar conexão com autenticação
     globalSocket = io(SOCKET_URL, {
@@ -67,12 +61,10 @@ export function useSocket() {
     socketRef.current = globalSocket;
 
     globalSocket.on("connect", () => {
-      console.log("[Socket] ✅ Conectado ao servidor:", globalSocket?.id);
       setIsConnected(true);
     });
 
     globalSocket.on("connect_error", (error) => {
-      console.error("[Socket] ❌ Erro de conexão:", error);
       setIsConnected(false);
     });
 

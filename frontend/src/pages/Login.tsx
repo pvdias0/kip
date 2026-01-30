@@ -35,7 +35,6 @@ export default function Login() {
       navigate("/");
     } catch (err) {
       setError("Usuário ou senha inválidos");
-      console.error("Login error:", err);
     }
   };
 
