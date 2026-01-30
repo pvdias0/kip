@@ -11,6 +11,7 @@ import { seedDefaultCategories } from "./scripts/seed-categories.js";
 import authRoutes from "./routes/auth.js";
 import categoriesRoutes from "./routes/categories.js";
 import entriesRoutes from "./routes/entries.js";
+import passwordResetRoutes from "./routes/passwordReset.js";
 
 dotenv.config();
 
@@ -22,10 +23,9 @@ const PORT = process.env.PORT || 3000;
 initializeSocket(httpServer);
 
 // Middleware
-app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CORS_ORIGIN || "https://kip.pvapps.com.br",
+    origin: ['https://kip.kler.app.br', 'http://localhost:3000', 'http://localhost:8080'],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -57,6 +57,7 @@ app.get("/api/db-test", async (req, res) => {
 
 // API Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/auth", passwordResetRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/entries", entriesRoutes);
 

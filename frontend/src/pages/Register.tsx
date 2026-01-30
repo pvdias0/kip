@@ -11,13 +11,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Wallet, Mail, Lock, User, AlertCircle, Loader2 } from "lucide-react";
+import { Wallet, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Register() {
   const navigate = useNavigate();
   const { register, isLoading } = useAuth();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -26,7 +26,7 @@ export default function Register() {
     e.preventDefault();
     setError("");
 
-    if (!username || !password || !confirmPassword) {
+    if (!email || !password || !confirmPassword) {
       setError("Por favor, preencha todos os campos");
       return;
     }
@@ -42,10 +42,10 @@ export default function Register() {
     }
 
     try {
-      await register(username, password);
+      await register(email, password);
       navigate("/");
     } catch (err) {
-      setError("Erro ao criar conta. Este usuário pode já estar registrado.");
+      setError("Erro ao criar conta. Este email pode já estar registrado.");
       console.error("Register error:", err);
     }
   };
@@ -84,17 +84,17 @@ export default function Register() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium">
-                  Nome de Usuário
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="seu_usuario"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="seu_email@exemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
                     disabled={isLoading}
                   />

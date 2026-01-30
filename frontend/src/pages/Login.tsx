@@ -11,27 +11,28 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Wallet, Mail, Lock, AlertCircle, Loader2 } from "lucide-react";
+import { Wallet, Mail, Lock, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!username || !password) {
+    if (!email || !password) {
       setError("Por favor, preencha todos os campos");
       return;
     }
 
     try {
-      await login(username, password);
+      await login(email, password);
       navigate("/");
     } catch (err) {
       console.error("Login page caught error:", err);
@@ -75,17 +76,17 @@ export default function Login() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-sm font-medium">
-                  Usuário
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="seu_usuario"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="seu_email@exemplo.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
                     disabled={isLoading}
                   />
@@ -100,13 +101,26 @@ export default function Login() {
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     disabled={isLoading}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={isLoading}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -125,6 +139,10 @@ export default function Login() {
                   "Entrar"
                 )}
               </Button>
+
+              <Link to="/forgot-password" className="text-xs text-primary hover:underline text-center block">
+                Esqueceu sua senha?
+              </Link>
             </form>
 
             <div className="relative py-4 pt-3">
