@@ -8,6 +8,15 @@ import { CategoryChart } from "@/components/CategoryChart";
 import { SummaryCard } from "@/components/SummaryCard";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft,
   TrendingUp,
   TrendingDown,
@@ -23,6 +32,7 @@ import { ptBR } from "date-fns/locale";
 
 const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const { transactions } = useTransactions();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -42,8 +52,9 @@ const Dashboard = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogoutConfirm = () => {
     logout();
+    setIsLogoutDialogOpen(false);
     navigate("/login");
   };
 
@@ -80,7 +91,7 @@ const Dashboard = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={handleLogout}
+                onClick={() => setIsLogoutDialogOpen(true)}
                 title="Sair"
                 className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10"
               >
@@ -90,6 +101,24 @@ const Dashboard = () => {
           </div>
         </div>
       </header>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Deseja sair?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você será redirecionado para a página de login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogoutConfirm}>
+              Sair
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Main Content */}
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-6 sm:space-y-8 flex-1">
