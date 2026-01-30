@@ -1,19 +1,120 @@
-import pool from '../config/database.js';
+import pool from "../config/database.js";
 
-// Get all categories
+// Get all categories (padrão + do usuário)
 export const getCategories = async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM categories ORDER BY name');
-    
+    const userId = req.user.id;
+
+    // Get default categories + user categories
+    const result = await pool.query(
+      "SELECT * FROM categories WHERE user_id IS NULL OR user_id = $1 ORDER BY name",
+      [userId],
+    );
+
     res.json({
-      status: 'OK',
+      status: "OK",
       categories: result.rows,
     });
   } catch (error) {
-    console.error('Get categories error:', error);
+    console.error("Get categories error:", error);
     res.status(500).json({
-      status: 'ERROR',
-      message: 'Erro ao buscar categorias',
+      status: "ERROR",
+      message: "Erro ao buscar categorias",
+    });
+  }
+};
+
+// Create category
+export const createCategory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name } = req.body;
+
+    // Validate input
+    if (!name || name.trim() === "") {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Nome da categoria é obrigatório",
+      });
+    }
+
+    // Check if category already exists for this user
+    const existing = await pool.query(
+      "SELECT id FROM categories WHERE user_id = $1 AND LOWER(name) = LOWER($2)",
+      [userId, name],
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(409).json({
+        status: "ERROR",
+        message: "Categoria já existe",
+      });
+    }
+
+    // Create category
+    const result = await pool.query(
+      "INSERT INTO categories (user_id, name) VALUES ($1, $2) RETURNING *",
+      [userId, name.trim()],
+    );
+
+    res.status(201).json({
+      status: "OK",
+      message: "Categoria criada com sucesso",
+      category: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Create category error:", error);
+    res.status(500).json({
+      status: "ERROR",
+      message: "Erro ao criar categoria",
+    });
+  }
+};
+
+// Delete category
+export const deleteCategory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+
+    // Check if category exists (padrão ou do usuário)
+    const category = await pool.query(
+      "SELECT * FROM categories WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)",
+      [id, userId],
+    );
+
+    if (category.rows.length === 0) {
+      return res.status(404).json({
+        status: "ERROR",
+        message: "Categoria não encontrada",
+      });
+    }
+
+    // Check if category is used in any entries
+    const usedInEntries = await pool.query(
+      "SELECT COUNT(*) FROM entries WHERE category_id = $1",
+      [id],
+    );
+
+    if (usedInEntries.rows[0].count > 0) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Não é possível deletar uma categoria que está sendo usada",
+      });
+    }
+
+    // Delete category
+    await pool.query("DELETE FROM categories WHERE id = $1", [id]);
+
+    res.json({
+      status: "OK",
+      message: "Categoria deletada com sucesso",
+    });
+  } catch (error) {
+    console.error("Delete category error:", error);
+    res.status(500).json({
+      status: "ERROR",
+      message: "Erro ao deletar categoria",
     });
   }
 };
@@ -23,27 +124,24 @@ export const getCategoriesByType = async (req, res) => {
   try {
     const { type } = req.params;
 
-    if (!['income', 'expense'].includes(type)) {
+    if (!["income", "expense"].includes(type)) {
       return res.status(400).json({
-        status: 'ERROR',
+        status: "ERROR",
         message: 'Tipo inválido. Deve ser "income" ou "expense"',
       });
     }
 
-    const result = await pool.query(
-      'SELECT * FROM categories WHERE type = $1 ORDER BY name',
-      [type]
-    );
+    const result = await pool.query("SELECT * FROM categories ORDER BY name");
 
     res.json({
-      status: 'OK',
+      status: "OK",
       categories: result.rows,
     });
   } catch (error) {
-    console.error('Get categories by type error:', error);
+    console.error("Get categories by type error:", error);
     res.status(500).json({
-      status: 'ERROR',
-      message: 'Erro ao buscar categorias',
+      status: "ERROR",
+      message: "Erro ao buscar categorias",
     });
   }
 };

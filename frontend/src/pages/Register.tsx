@@ -1,47 +1,52 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Wallet, Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Wallet, Mail, Lock, User, AlertCircle, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Register() {
   const navigate = useNavigate();
   const { register, isLoading } = useAuth();
-  const [email, setEmail] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
-    if (!email || !fullName || !password || !confirmPassword) {
-      setError('Por favor, preencha todos os campos');
+    if (!username || !password || !confirmPassword) {
+      setError("Por favor, preencha todos os campos");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('As senhas não conferem');
+      setError("As senhas não conferem");
       return;
     }
 
     if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
+      setError("A senha deve ter pelo menos 6 caracteres");
       return;
     }
 
     try {
-      await register(email, fullName, password);
-      navigate('/');
+      await register(username, password);
+      navigate("/");
     } catch (err) {
-      setError('Erro ao criar conta. Este email pode já estar registrado.');
-      console.error('Register error:', err);
+      setError("Erro ao criar conta. Este usuário pode já estar registrado.");
+      console.error("Register error:", err);
     }
   };
 
@@ -79,35 +84,17 @@ export default function Register() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName" className="text-sm font-medium">
-                  Nome Completo
+                <Label htmlFor="username" className="text-sm font-medium">
+                  Nome de Usuário
                 </Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
                   <Input
-                    id="fullName"
+                    id="username"
                     type="text"
-                    placeholder="Seu Nome"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="pl-10"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">
-                  Email
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu_usuario"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     className="pl-10"
                     disabled={isLoading}
                   />
@@ -133,7 +120,10 @@ export default function Register() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                <Label
+                  htmlFor="confirmPassword"
+                  className="text-sm font-medium"
+                >
                   Confirmar Senha
                 </Label>
                 <div className="relative">
@@ -162,7 +152,7 @@ export default function Register() {
                     Criando Conta...
                   </>
                 ) : (
-                  'Criar Conta'
+                  "Criar Conta"
                 )}
               </Button>
             </form>

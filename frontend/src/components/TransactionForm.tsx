@@ -1,62 +1,62 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { TransactionType, INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '@/types/finance';
-import { Plus, TrendingUp, TrendingDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/dialog";
+import { TransactionType } from "@/types/finance";
+import { useCategories } from "@/hooks/useCategories";
+import { Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface TransactionFormProps {
   onSubmit: (transaction: {
     type: TransactionType;
     amount: number;
     description: string;
-    category: string;
+    category_id?: number;
     date: string;
   }) => void;
 }
 
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [open, setOpen] = useState(false);
-  const [type, setType] = useState<TransactionType>('income');
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-
-  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const [type, setType] = useState<TransactionType>("income");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [categoryId, setCategoryId] = useState<string>("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const { categories } = useCategories();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !description || !category) return;
+    if (!amount || !description) return;
 
     onSubmit({
       type,
       amount: parseFloat(amount),
       description,
-      category,
+      category_id: categoryId ? parseInt(categoryId) : undefined,
       date,
     });
 
     // Reset form
-    setAmount('');
-    setDescription('');
-    setCategory('');
-    setDate(new Date().toISOString().split('T')[0]);
+    setAmount("");
+    setDescription("");
+    setCategoryId("");
+    setDate(new Date().toISOString().split("T")[0]);
     setOpen(false);
   };
 
@@ -78,14 +78,14 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
             <button
               type="button"
               onClick={() => {
-                setType('income');
-                setCategory('');
+                setType("income");
+                setCategoryId("");
               }}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all",
-                type === 'income' 
-                  ? "bg-income text-income-foreground shadow-sm" 
-                  : "text-muted-foreground hover:text-foreground"
+                type === "income"
+                  ? "bg-income text-income-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <TrendingUp className="h-4 w-4" />
@@ -94,14 +94,14 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
             <button
               type="button"
               onClick={() => {
-                setType('expense');
-                setCategory('');
+                setType("expense");
+                setCategoryId("");
               }}
               className={cn(
                 "flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium transition-all",
-                type === 'expense' 
-                  ? "bg-expense text-expense-foreground shadow-sm" 
-                  : "text-muted-foreground hover:text-foreground"
+                type === "expense"
+                  ? "bg-expense text-expense-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               <TrendingDown className="h-4 w-4" />
@@ -139,15 +139,20 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
 
           {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="category">Categoria</Label>
-            <Select value={category} onValueChange={setCategory} required>
+            <Label htmlFor="category">Categoria (Opcional)</Label>
+            <Select
+              value={categoryId || "placeholder"}
+              onValueChange={(val) =>
+                setCategoryId(val === "placeholder" ? "" : val)
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione uma categoria" />
               </SelectTrigger>
               <SelectContent className="bg-popover">
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
+                  <SelectItem key={cat.id} value={cat.id.toString()}>
+                    {cat.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -167,7 +172,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
           </div>
 
           <Button type="submit" className="w-full" size="lg">
-            Adicionar {type === 'income' ? 'Ganho' : 'Gasto'}
+            Adicionar {type === "income" ? "Ganho" : "Gasto"}
           </Button>
         </form>
       </DialogContent>

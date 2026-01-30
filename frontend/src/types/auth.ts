@@ -1,7 +1,6 @@
 export interface User {
-  id: string;
-  email: string;
-  fullName: string;
+  id: number;
+  username: string;
 }
 
 export interface AuthResponse {

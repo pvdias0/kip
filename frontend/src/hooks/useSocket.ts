@@ -1,32 +1,59 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useEffect, useRef, useCallback, useState } from "react";
+import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:2050";
 
 interface SocketEvents {
-  'transaction:created': (transaction: any) => void;
-  'transaction:updated': (transaction: any) => void;
-  'transaction:deleted': (data: { id: string }) => void;
-  'stats:updated': (stats: any) => void;
+  "transaction:created": (transaction: Record<string, unknown>) => void;
+  "transaction:updated": (transaction: Record<string, unknown>) => void;
+  "transaction:deleted": (data: { id: string }) => void;
+  "stats:updated": (stats: Record<string, unknown>) => void;
 }
+
+// Global singleton para evitar múltiplas conexões
+let globalSocket: Socket | null = null;
 
 export function useSocket() {
   const socketRef = useRef<Socket | null>(null);
-  const listenersRef = useRef<Map<string, Set<Function>>>(new Map());
+  const listenersRef = useRef<
+    Map<string, Set<(data: Record<string, unknown>) => void>>
+  >(new Map());
+  const [isConnected, setIsConnected] = useState(false);
 
-  // Inicializar conexão
+  // Inicializar conexão (apenas uma vez - singleton)
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-
-    if (!token) {
-      console.warn('[Socket] ❌ Token não disponível em localStorage');
+    // Se já temos uma conexão global ativa, usar ela
+    if (globalSocket?.connected) {
+      console.log(
+        "[Socket] ♻️ Reutilizando conexão existente:",
+        globalSocket.id,
+      );
+      socketRef.current = globalSocket;
+      setIsConnected(true);
       return;
     }
 
-    console.log('[Socket] 🔐 Token encontrado (primeiros 20 chars):', token.substring(0, 20) + '...');
+    // Se há uma conexão em progresso, não criar outra
+    if (globalSocket && !globalSocket.disconnected) {
+      console.log("[Socket] ⏳ Aguardando conexão existente...");
+      socketRef.current = globalSocket;
+      return;
+    }
+
+    const token = localStorage.getItem("auth_token");
+
+    if (!token) {
+      console.warn("[Socket] ❌ Token não disponível em localStorage");
+      return;
+    }
+
+    console.log(
+      "[Socket] 🔐 Token encontrado (primeiros 20 chars):",
+      token.substring(0, 20) + "...",
+    );
 
     // Criar conexão com autenticação
-    socketRef.current = io(SOCKET_URL, {
+    globalSocket = io(SOCKET_URL, {
       auth: {
         token,
       },
@@ -34,30 +61,35 @@ export function useSocket() {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       reconnectionAttempts: 5,
+      forceNew: false, // Reutilizar conexão existente
     });
 
-    socketRef.current.on('connect', () => {
-      console.log('[Socket] ✅ Conectado ao servidor:', socketRef.current?.id);
+    socketRef.current = globalSocket;
+
+    globalSocket.on("connect", () => {
+      console.log("[Socket] ✅ Conectado ao servidor:", globalSocket?.id);
+      setIsConnected(true);
     });
 
-    socketRef.current.on('connect_error', (error) => {
-      console.error('[Socket] ❌ Erro de conexão:', error);
+    globalSocket.on("connect_error", (error) => {
+      console.error("[Socket] ❌ Erro de conexão:", error);
+      setIsConnected(false);
     });
 
-    socketRef.current.on('disconnect', () => {
-      console.log('[Socket] 🔌 Desconectado do servidor');
+    globalSocket.on("disconnect", () => {
+      console.log("[Socket] 🔌 Desconectado do servidor");
+      setIsConnected(false);
     });
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-      }
+      // Não desconectar globalmente, apenas remover referência local
+      socketRef.current = null;
     };
   }, []);
 
   // Registrar listeners para um evento
   const on = useCallback(
-    (event: string, callback: Function) => {
+    (event: string, callback: (data: Record<string, unknown>) => void) => {
       if (!listenersRef.current.has(event)) {
         listenersRef.current.set(event, new Set());
 
@@ -79,19 +111,17 @@ export function useSocket() {
         listenersRef.current.get(event)?.delete(callback);
       };
     },
-    []
+    [],
   );
 
   // Emitir evento
-  const emit = useCallback((event: string, data?: any) => {
+  const emit = useCallback((event: string, data?: Record<string, unknown>) => {
     if (socketRef.current) {
       socketRef.current.emit(event, data);
     }
   }, []);
 
   // Verificar conexão
-  const isConnected = socketRef.current?.connected ?? false;
-
   return {
     socket: socketRef.current,
     on,

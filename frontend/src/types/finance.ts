@@ -1,13 +1,14 @@
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = "income" | "expense";
 
 export interface Transaction {
-  id: string;
+  id: number;
+  user_id: number;
+  category_id: number | null;
   type: TransactionType;
   amount: number;
   description: string;
-  category: string;
   date: string; // ISO date string
-  createdAt: string;
+  created_at: string; // ISO timestamp
 }
 
 export interface TransactionSummary {
@@ -15,23 +16,3 @@ export interface TransactionSummary {
   totalExpense: number;
   balance: number;
 }
-
-export const INCOME_CATEGORIES = [
-  'Salário',
-  'Freelance',
-  'Investimentos',
-  'Vendas',
-  'Outros',
-] as const;
-
-export const EXPENSE_CATEGORIES = [
-  'Alimentação',
-  'Transporte',
-  'Moradia',
-  'Saúde',
-  'Educação',
-  'Lazer',
-  'Compras',
-  'Contas',
-  'Outros',
-] as const;

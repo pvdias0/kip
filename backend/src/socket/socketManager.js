@@ -1,5 +1,5 @@
-import { Server } from 'socket.io';
-import { verifyToken } from '../utils/jwt.js';
+import { Server } from "socket.io";
+import { verifyToken } from "../utils/jwt.js";
 
 let io;
 const connectedUsers = new Map(); // userId -> Set of socketIds
@@ -7,32 +7,32 @@ const connectedUsers = new Map(); // userId -> Set of socketIds
 export function initializeSocket(server) {
   io = new Server(server, {
     cors: {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+      origin: process.env.CORS_ORIGIN || "http://localhost:8080",
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      methods: ["GET", "POST", "PUT", "DELETE"],
     },
   });
 
   // Middleware de autenticação
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
-    
+
     if (!token) {
-      return next(new Error('Token de autenticação não fornecido'));
+      return next(new Error("Token de autenticação não fornecido"));
     }
 
     try {
       const decoded = verifyToken(token);
-      socket.userId = decoded.userId;
+      socket.userId = decoded.id || decoded.userId;
       socket.userEmail = decoded.email;
       next();
     } catch (err) {
-      next(new Error('Token inválido'));
+      next(new Error("Token inválido"));
     }
   });
 
   // Conexão
-  io.on('connection', (socket) => {
+  io.on("connection", (socket) => {
     console.log(`[Socket] Usuário ${socket.userId} conectado: ${socket.id}`);
 
     // Adicionar usuário aos conectados
@@ -42,8 +42,10 @@ export function initializeSocket(server) {
     connectedUsers.get(socket.userId).add(socket.id);
 
     // Desconexão
-    socket.on('disconnect', () => {
-      console.log(`[Socket] Usuário ${socket.userId} desconectado: ${socket.id}`);
+    socket.on("disconnect", () => {
+      console.log(
+        `[Socket] Usuário ${socket.userId} desconectado: ${socket.id}`,
+      );
       const userSockets = connectedUsers.get(socket.userId);
       if (userSockets) {
         userSockets.delete(socket.id);

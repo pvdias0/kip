@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = "http://localhost:2050/api";
 
 class ApiService {
   private token: string | null = null;
@@ -9,11 +9,11 @@ class ApiService {
 
   private async request(
     endpoint: string,
-    options: RequestInit = {}
-  ): Promise<any> {
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      ...options.headers,
+    options: RequestInit = {},
+  ): Promise<Record<string, unknown>> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...((options.headers as Record<string, string>) || {}),
     };
 
     if (this.token) {
@@ -29,62 +29,75 @@ class ApiService {
       const error = await response.json().catch(() => ({
         message: response.statusText,
       }));
-      throw new Error(error.message || 'API Error');
+      throw new Error(error.message || "API Error");
     }
 
     return response.json();
   }
 
   // Auth endpoints
-  async register(username: string, fullName: string, password: string) {
-    return this.request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ username, fullName, password }),
+  async register(username: string, password: string) {
+    return this.request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
     });
   }
 
   async login(username: string, password: string) {
-    return this.request('/auth/login', {
-      method: 'POST',
+    return this.request("/auth/login", {
+      method: "POST",
       body: JSON.stringify({ username, password }),
     });
   }
 
   // Categories endpoints
   async getCategories() {
-    return this.request('/categories');
+    return this.request("/categories");
   }
 
-  async getCategoriesByType(type: 'income' | 'expense') {
+  async createCategory(name: string) {
+    return this.request("/categories", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async deleteCategory(id: number) {
+    return this.request(`/categories/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async getCategoriesByType(type: "income" | "expense") {
     return this.request(`/categories/${type}`);
   }
 
   // Entries endpoints
   async createEntry(data: {
-    type: 'income' | 'expense';
+    type: "income" | "expense";
     amount: number;
     description: string;
     category_id?: number;
     date: string;
   }) {
-    return this.request('/entries', {
-      method: 'POST',
+    return this.request("/entries", {
+      method: "POST",
       body: JSON.stringify(data),
     });
   }
 
   async getEntries(filters?: {
-    type?: 'income' | 'expense';
+    type?: "income" | "expense";
     startDate?: string;
     endDate?: string;
   }) {
     const params = new URLSearchParams();
-    if (filters?.type) params.append('type', filters.type);
-    if (filters?.startDate) params.append('startDate', filters.startDate);
-    if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.type) params.append("type", filters.type);
+    if (filters?.startDate) params.append("startDate", filters.startDate);
+    if (filters?.endDate) params.append("endDate", filters.endDate);
 
     const queryString = params.toString();
-    const endpoint = queryString ? `/entries?${queryString}` : '/entries';
+    const endpoint = queryString ? `/entries?${queryString}` : "/entries";
     return this.request(endpoint);
   }
 
@@ -92,35 +105,37 @@ class ApiService {
     return this.request(`/entries/${id}`);
   }
 
-  async updateEntry(id: number, data: Partial<{
-    type: 'income' | 'expense';
-    amount: number;
-    description: string;
-    category_id?: number;
-    date: string;
-  }>) {
+  async updateEntry(
+    id: number,
+    data: Partial<{
+      type: "income" | "expense";
+      amount: number;
+      description: string;
+      category_id?: number;
+      date: string;
+    }>,
+  ) {
     return this.request(`/entries/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
     });
   }
 
   async deleteEntry(id: number) {
     return this.request(`/entries/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
-  async getStats(filters?: {
-    startDate?: string;
-    endDate?: string;
-  }) {
+  async getStats(filters?: { startDate?: string; endDate?: string }) {
     const params = new URLSearchParams();
-    if (filters?.startDate) params.append('startDate', filters.startDate);
-    if (filters?.endDate) params.append('endDate', filters.endDate);
+    if (filters?.startDate) params.append("startDate", filters.startDate);
+    if (filters?.endDate) params.append("endDate", filters.endDate);
 
     const queryString = params.toString();
-    const endpoint = queryString ? `/entries/stats?${queryString}` : '/entries/stats';
+    const endpoint = queryString
+      ? `/entries/stats?${queryString}`
+      : "/entries/stats";
     return this.request(endpoint);
   }
 }

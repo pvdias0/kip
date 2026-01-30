@@ -1,8 +1,16 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Transaction, TransactionSummary } from '@/types/finance';
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO, isWithinInterval, format } from 'date-fns';
-import { apiService } from '@/services/api';
-import { useSocket } from './useSocket';
+import { useState, useEffect, useCallback } from "react";
+import { Transaction, TransactionSummary } from "@/types/finance";
+import {
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  parseISO,
+  isWithinInterval,
+  format,
+} from "date-fns";
+import { apiService } from "@/services/api";
+import { useSocket } from "./useSocket";
 
 export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -16,23 +24,14 @@ export function useTransactions() {
       setIsLoading(true);
       setError(null);
       const response = await apiService.getEntries();
-      
-      // Transform API response to match frontend types
-      const transformed = response.entries.map((entry: any) => ({
-        id: entry.id.toString(),
-        type: entry.type,
-        amount: parseFloat(entry.amount),
-        description: entry.description,
-        category: entry.category_id ? entry.category_id.toString() : '',
-        date: entry.date,
-        createdAt: entry.created_at,
-      }));
-      
-      setTransactions(transformed);
+
+      // Use API response directly - no transformation needed
+      setTransactions(response.entries);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao buscar transações';
+      const message =
+        err instanceof Error ? err.message : "Erro ao buscar transações";
       setError(message);
-      console.error('Fetch transactions error:', err);
+      console.error("Fetch transactions error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -45,47 +44,37 @@ export function useTransactions() {
 
   // Escutar eventos de WebSocket
   useEffect(() => {
-    if (!isConnected) return;
+    if (!isConnected) {
+      return;
+    }
 
     // Nova transação criada
-    const unsubscribeCreated = on('transaction:created', (newTransaction: any) => {
-      const transformed = {
-        id: newTransaction.id.toString(),
-        type: newTransaction.type,
-        amount: parseFloat(newTransaction.amount),
-        description: newTransaction.description,
-        category: newTransaction.category_id ? newTransaction.category_id.toString() : '',
-        date: newTransaction.date,
-        createdAt: newTransaction.created_at,
-      };
-      
-      setTransactions((prev) => [transformed, ...prev]);
-      console.log('[Socket] Nova transação recebida:', transformed);
-    });
+    const unsubscribeCreated = on(
+      "transaction:created",
+      (newTransaction: any) => {
+        setTransactions((prev) => [newTransaction, ...prev]);
+      },
+    );
 
     // Transação atualizada
-    const unsubscribeUpdated = on('transaction:updated', (updatedTransaction: any) => {
-      const transformed = {
-        id: updatedTransaction.id.toString(),
-        type: updatedTransaction.type,
-        amount: parseFloat(updatedTransaction.amount),
-        description: updatedTransaction.description,
-        category: updatedTransaction.category_id ? updatedTransaction.category_id.toString() : '',
-        date: updatedTransaction.date,
-        createdAt: updatedTransaction.created_at,
-      };
-
-      setTransactions((prev) =>
-        prev.map((t) => (t.id === transformed.id ? transformed : t))
-      );
-      console.log('[Socket] Transação atualizada:', transformed);
-    });
+    const unsubscribeUpdated = on(
+      "transaction:updated",
+      (updatedTransaction: any) => {
+        setTransactions((prev) =>
+          prev.map((t) =>
+            t.id === updatedTransaction.id ? updatedTransaction : t,
+          ),
+        );
+      },
+    );
 
     // Transação deletada
-    const unsubscribeDeleted = on('transaction:deleted', (data: { id: string }) => {
-      setTransactions((prev) => prev.filter((t) => t.id !== data.id.toString()));
-      console.log('[Socket] Transação deletada:', data.id);
-    });
+    const unsubscribeDeleted = on(
+      "transaction:deleted",
+      (data: { id: number }) => {
+        setTransactions((prev) => prev.filter((t) => t.id !== data.id));
+      },
+    );
 
     return () => {
       unsubscribeCreated();
@@ -95,42 +84,41 @@ export function useTransactions() {
   }, [isConnected, on]);
 
   const addTransaction = useCallback(
-    async (transaction: Omit<Transaction, 'id' | 'createdAt'>) => {
+    async (transaction: Omit<Transaction, "id" | "user_id" | "created_at">) => {
       try {
         setError(null);
         await apiService.createEntry({
           type: transaction.type,
           amount: transaction.amount,
           description: transaction.description,
-          category_id: transaction.category ? parseInt(transaction.category) : undefined,
+          category_id: transaction.category_id,
           date: transaction.date,
         });
-        
+
         // Socket event will update the list automatically
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Erro ao adicionar transação';
+        const message =
+          err instanceof Error ? err.message : "Erro ao adicionar transação";
         setError(message);
         throw err;
       }
     },
-    []
+    [],
   );
 
-  const deleteTransaction = useCallback(
-    async (id: string) => {
-      try {
-        setError(null);
-        await apiService.deleteEntry(parseInt(id));
-        
-        // Socket event will update the list automatically
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Erro ao deletar transação';
-        setError(message);
-        throw err;
-      }
-    },
-    []
-  );
+  const deleteTransaction = useCallback(async (id: string) => {
+    try {
+      setError(null);
+      await apiService.deleteEntry(parseInt(id));
+
+      // Socket event will update the list automatically
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro ao deletar transação";
+      setError(message);
+      throw err;
+    }
+  }, []);
 
   const getFilteredTransactions = useCallback(
     (startDate: Date, endDate: Date): Transaction[] => {
@@ -139,17 +127,17 @@ export function useTransactions() {
         return isWithinInterval(date, { start: startDate, end: endDate });
       });
     },
-    [transactions]
+    [transactions],
   );
 
   const getSummary = useCallback(
     (filteredTransactions: Transaction[]): TransactionSummary => {
       const totalIncome = filteredTransactions
-        .filter((t) => t.type === 'income')
+        .filter((t) => t.type === "income")
         .reduce((sum, t) => sum + t.amount, 0);
 
       const totalExpense = filteredTransactions
-        .filter((t) => t.type === 'expense')
+        .filter((t) => t.type === "expense")
         .reduce((sum, t) => sum + t.amount, 0);
 
       return {
@@ -158,7 +146,7 @@ export function useTransactions() {
         balance: totalIncome - totalExpense,
       };
     },
-    []
+    [],
   );
 
   // Get summary for a specific week
@@ -166,11 +154,11 @@ export function useTransactions() {
     (weekStart: Date): TransactionSummary => {
       const filtered = getFilteredTransactions(
         startOfWeek(weekStart, { weekStartsOn: 0 }),
-        endOfWeek(weekStart, { weekStartsOn: 0 })
+        endOfWeek(weekStart, { weekStartsOn: 0 }),
       );
       return getSummary(filtered);
     },
-    [getFilteredTransactions, getSummary]
+    [getFilteredTransactions, getSummary],
   );
 
   // Get summary for a specific month
@@ -178,11 +166,11 @@ export function useTransactions() {
     (monthDate: Date): TransactionSummary => {
       const filtered = getFilteredTransactions(
         startOfMonth(monthDate),
-        endOfMonth(monthDate)
+        endOfMonth(monthDate),
       );
       return getSummary(filtered);
     },
-    [getFilteredTransactions, getSummary]
+    [getFilteredTransactions, getSummary],
   );
 
   // Get transactions for a specific week
@@ -190,18 +178,21 @@ export function useTransactions() {
     (weekStart: Date): Transaction[] => {
       return getFilteredTransactions(
         startOfWeek(weekStart, { weekStartsOn: 0 }),
-        endOfWeek(weekStart, { weekStartsOn: 0 })
+        endOfWeek(weekStart, { weekStartsOn: 0 }),
       );
     },
-    [getFilteredTransactions]
+    [getFilteredTransactions],
   );
 
   // Get transactions for a specific month
   const getMonthTransactions = useCallback(
     (monthDate: Date): Transaction[] => {
-      return getFilteredTransactions(startOfMonth(monthDate), endOfMonth(monthDate));
+      return getFilteredTransactions(
+        startOfMonth(monthDate),
+        endOfMonth(monthDate),
+      );
     },
-    [getFilteredTransactions]
+    [getFilteredTransactions],
   );
 
   return {

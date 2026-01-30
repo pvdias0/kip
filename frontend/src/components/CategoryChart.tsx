@@ -1,24 +1,36 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { PieChartIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+} from "recharts";
+import { PieChartIcon } from "lucide-react";
 
 interface CategoryChartProps {
-  data: { category: string; amount: number }[];
+  data: { category: string | number; amount: number }[];
   title: string;
-  type: 'income' | 'expense';
+  type: "income" | "expense";
   emptyMessage?: string;
 }
 
-const INCOME_COLORS = ['#22c55e', '#16a34a', '#15803d', '#166534', '#14532d'];
-const EXPENSE_COLORS = ['#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d'];
+const INCOME_COLORS = ["#22c55e", "#16a34a", "#15803d", "#166534", "#14532d"];
+const EXPENSE_COLORS = ["#ef4444", "#dc2626", "#b91c1c", "#991b1b", "#7f1d1d"];
 
-export function CategoryChart({ data, title, type, emptyMessage = "Nenhum dado" }: CategoryChartProps) {
-  const colors = type === 'income' ? INCOME_COLORS : EXPENSE_COLORS;
+export function CategoryChart({
+  data,
+  title,
+  type,
+  emptyMessage = "Nenhum dado",
+}: CategoryChartProps) {
+  const colors = type === "income" ? INCOME_COLORS : EXPENSE_COLORS;
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
@@ -34,7 +46,9 @@ export function CategoryChart({ data, title, type, emptyMessage = "Nenhum dado" 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-muted-foreground py-8">{emptyMessage}</p>
+          <p className="text-center text-muted-foreground py-8">
+            {emptyMessage}
+          </p>
         </CardContent>
       </Card>
     );
@@ -63,34 +77,37 @@ export function CategoryChart({ data, title, type, emptyMessage = "Nenhum dado" 
                 nameKey="category"
               >
                 {data.map((_, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
+                  <Cell
+                    key={`cell-${index}`}
                     fill={colors[index % colors.length]}
                     className="transition-all hover:opacity-80"
                   />
                 ))}
               </Pie>
-              <Tooltip 
+              <Tooltip
                 formatter={(value: number) => formatCurrency(value)}
                 contentStyle={{
-                  backgroundColor: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
                 }}
               />
-              <Legend 
+              <Legend
                 formatter={(value) => <span className="text-sm">{value}</span>}
               />
             </PieChart>
           </ResponsiveContainer>
         </div>
-        
+
         {/* Category breakdown list */}
         <div className="mt-4 space-y-2">
           {data.map((item, index) => (
-            <div key={item.category} className="flex items-center justify-between text-sm">
+            <div
+              key={item.category}
+              className="flex items-center justify-between text-sm"
+            >
               <div className="flex items-center gap-2">
-                <div 
+                <div
                   className="w-3 h-3 rounded-full"
                   style={{ backgroundColor: colors[index % colors.length] }}
                 />
@@ -100,7 +117,9 @@ export function CategoryChart({ data, title, type, emptyMessage = "Nenhum dado" 
                 <span className="text-muted-foreground">
                   {((item.amount / total) * 100).toFixed(1)}%
                 </span>
-                <span className="font-medium">{formatCurrency(item.amount)}</span>
+                <span className="font-medium">
+                  {formatCurrency(item.amount)}
+                </span>
               </div>
             </div>
           ))}

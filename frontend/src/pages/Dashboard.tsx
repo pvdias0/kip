@@ -1,26 +1,34 @@
-import { useState, useEffect } from 'react';
-import { useTransactions } from '@/hooks/useTransactions';
-import { useTransactionStats } from '@/hooks/useTransactionStats';
-import { useAuth } from '@/contexts/AuthContext';
-import { MonthNavigator } from '@/components/MonthNavigator';
-import { RankingList } from '@/components/RankingList';
-import { CategoryChart } from '@/components/CategoryChart';
-import { SummaryCard } from '@/components/SummaryCard';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, TrendingUp, TrendingDown, Wallet, BarChart3, LogOut } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { addMonths, subMonths, isSameMonth } from 'date-fns';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useState, useEffect } from "react";
+import { useTransactions } from "@/hooks/useTransactions";
+import { useTransactionStats } from "@/hooks/useTransactionStats";
+import { useAuth } from "@/contexts/AuthContext";
+import { MonthNavigator } from "@/components/MonthNavigator";
+import { RankingList } from "@/components/RankingList";
+import { CategoryChart } from "@/components/CategoryChart";
+import { SummaryCard } from "@/components/SummaryCard";
+import { Button } from "@/components/ui/button";
+import {
+  ArrowLeft,
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  BarChart3,
+  Settings,
+  LogOut,
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { addMonths, subMonths, isSameMonth } from "date-fns";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const { transactions } = useTransactions();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
+
   const stats = useTransactionStats(transactions, selectedMonth);
-  
+
   const now = new Date();
   const canGoNext = !isSameMonth(selectedMonth, now);
 
@@ -36,7 +44,7 @@ const Dashboard = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
@@ -53,18 +61,27 @@ const Dashboard = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
-                <p className="text-sm text-muted-foreground capitalize">{today}</p>
+                <p className="text-sm text-muted-foreground capitalize">
+                  {today}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden md:block text-right">
-                <p className="text-sm font-medium text-foreground">{user?.fullName}</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
+                <p className="text-sm font-medium text-foreground">
+                  {user?.username}
+                </p>
               </div>
               <Link to="/">
                 <Button variant="outline" className="gap-2">
                   <ArrowLeft className="h-4 w-4" />
                   Voltar
+                </Button>
+              </Link>
+              <Link to="/categories">
+                <Button variant="outline" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">Categorias</span>
                 </Button>
               </Link>
               <Button

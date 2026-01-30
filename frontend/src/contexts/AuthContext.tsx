@@ -1,13 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User } from '@/types/auth';
-import { apiService } from '@/services/api';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { User } from "@/types/auth";
+import { apiService } from "@/services/api";
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, fullName: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
+  register: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   error: string | null;
@@ -23,8 +23,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Load token from localStorage on mount
   useEffect(() => {
-    const savedToken = localStorage.getItem('auth_token');
-    const savedUser = localStorage.getItem('auth_user');
+    const savedToken = localStorage.getItem("auth_token");
+    const savedUser = localStorage.getItem("auth_user");
 
     if (savedToken && savedUser) {
       try {
@@ -32,31 +32,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(JSON.parse(savedUser));
         apiService.setToken(savedToken);
       } catch (err) {
-        console.error('Failed to load auth data:', err);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+        console.error("Failed to load auth data:", err);
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
       }
     }
 
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (username: string, password: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await apiService.login(email, password);
+      const response = await apiService.login(username, password);
 
       const { user: userData, token: newToken } = response;
 
       setUser(userData);
       setToken(newToken);
       apiService.setToken(newToken);
-      localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('auth_user', JSON.stringify(userData));
+      localStorage.setItem("auth_token", newToken);
+      localStorage.setItem("auth_user", JSON.stringify(userData));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao fazer login';
+      const message =
+        err instanceof Error ? err.message : "Erro ao fazer login";
       setError(message);
       throw err;
     } finally {
@@ -64,22 +65,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, fullName: string, password: string) => {
+  const register = async (username: string, password: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await apiService.register(email, fullName, password);
+      const response = await apiService.register(username, password);
 
       const { user: userData, token: newToken } = response;
 
       setUser(userData);
       setToken(newToken);
       apiService.setToken(newToken);
-      localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('auth_user', JSON.stringify(userData));
+      localStorage.setItem("auth_token", newToken);
+      localStorage.setItem("auth_user", JSON.stringify(userData));
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro ao criar conta';
+      const message =
+        err instanceof Error ? err.message : "Erro ao criar conta";
       setError(message);
       throw err;
     } finally {
@@ -92,8 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setError(null);
     apiService.setToken(null);
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
   };
 
   const value: AuthContextType = {
@@ -113,7 +115,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }

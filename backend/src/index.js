@@ -1,14 +1,16 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import dotenv from 'dotenv';
-import http from 'http';
-import pool, { testConnection } from './config/database.js';
-import { errorHandler } from './middleware/auth.js';
-import { initializeSocket } from './socket/socketManager.js';
-import authRoutes from './routes/auth.js';
-import categoriesRoutes from './routes/categories.js';
-import entriesRoutes from './routes/entries.js';
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import dotenv from "dotenv";
+import http from "http";
+import pool, { testConnection } from "./config/database.js";
+import { errorHandler } from "./middleware/auth.js";
+import { initializeSocket } from "./utils/socket.js";
+import { migrateCategories } from "./scripts/migrate-categories.js";
+import { seedDefaultCategories } from "./scripts/seed-categories.js";
+import authRoutes from "./routes/auth.js";
+import categoriesRoutes from "./routes/categories.js";
+import entriesRoutes from "./routes/entries.js";
 
 dotenv.config();
 
@@ -21,46 +23,48 @@ initializeSocket(httpServer);
 
 // Middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:8080",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
 app.use(express.json());
 
 // Health check route
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Backend está rodando!' });
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK", message: "Backend está rodando!" });
 });
 
 // Database test route
-app.get('/api/db-test', async (req, res) => {
+app.get("/api/db-test", async (req, res) => {
   try {
-    const result = await pool.query('SELECT NOW()');
+    const result = await pool.query("SELECT NOW()");
     res.json({
-      status: 'OK',
-      message: 'Conexão com banco bem-sucedida',
+      status: "OK",
+      message: "Conexão com banco bem-sucedida",
       timestamp: result.rows[0].now,
     });
   } catch (err) {
     res.status(500).json({
-      status: 'ERROR',
+      status: "ERROR",
       message: err.message,
     });
   }
 });
 
 // API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/categories', categoriesRoutes);
-app.use('/api/entries', entriesRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/categories", categoriesRoutes);
+app.use("/api/entries", entriesRoutes);
 
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
-    status: 'ERROR',
-    message: 'Rota não encontrada',
+    status: "ERROR",
+    message: "Rota não encontrada",
   });
 });
 
@@ -73,10 +77,16 @@ const startServer = async () => {
 
   if (!dbConnected) {
     console.error(
-      '⚠️ Banco de dados não está acessível. Verifique as credenciais e tente novamente.'
+      "⚠️ Banco de dados não está acessível. Verifique as credenciais e tente novamente.",
     );
     process.exit(1);
   }
+
+  // Run migrations
+  await migrateCategories();
+
+  // Seed default categories
+  await seedDefaultCategories();
 
   httpServer.listen(PORT, () => {
     console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
@@ -90,4 +100,3 @@ const startServer = async () => {
 };
 
 startServer();
-
