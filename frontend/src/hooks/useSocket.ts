@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = "https://kip-backend.kler.app.br";
+const SOCKET_URL = "https://kip.kler.app.br";
 
 interface SocketEvents {
   "transaction:created": (transaction: Record<string, unknown>) => void;
