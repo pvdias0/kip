@@ -1,7 +1,20 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
-const SOCKET_URL = "https://kip.kler.app.br";
+// Determinar URL do socket dinamicamente baseado no ambiente
+const getSocketURL = () => {
+  // Em produção, usa a mesma origem
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    console.log('[Socket] 🌐 Ambiente de produção detectado');
+    return window.location.origin;
+  }
+  
+  // Em desenvolvimento, usa localhost:3000 (backend local)
+  console.log('[Socket] 💻 Ambiente de desenvolvimento detectado');
+  return 'http://localhost:3000';
+};
+
+const SOCKET_URL = getSocketURL();
 
 interface SocketEvents {
   "transaction:created": (transaction: Record<string, unknown>) => void;
@@ -47,6 +60,7 @@ export function useSocket() {
     }
 
     // Criar conexão com autenticação
+    console.log(`[Socket] 🔗 Conectando em: ${SOCKET_URL}`);
     globalSocket = io(SOCKET_URL, {
       auth: {
         token,
@@ -61,15 +75,17 @@ export function useSocket() {
     socketRef.current = globalSocket;
 
     globalSocket.on("connect", () => {
+      console.log("[Socket] ✅ Conectado com sucesso!", globalSocket?.id);
       setIsConnected(true);
     });
 
     globalSocket.on("connect_error", (error) => {
+      console.error("[Socket] ❌ Erro de conexão:", error);
       setIsConnected(false);
     });
 
-    globalSocket.on("disconnect", () => {
-      console.log("[Socket] 🔌 Desconectado do servidor");
+    globalSocket.on("disconnect", (reason) => {
+      console.log("[Socket] 🔌 Desconectado do servidor. Razão:", reason);
       setIsConnected(false);
     });
 
