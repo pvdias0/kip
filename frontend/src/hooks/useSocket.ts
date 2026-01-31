@@ -3,15 +3,15 @@ import { io, Socket } from "socket.io-client";
 
 // Determinar URL do socket dinamicamente baseado no ambiente
 const getSocketURL = () => {
-  // Em produção, usa a mesma origem
-  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-    console.log('[Socket] 🌐 Ambiente de produção detectado');
-    return window.location.origin;
+  // Em desenvolvimento local
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    console.log('[Socket] 💻 Ambiente de desenvolvimento detectado');
+    return 'http://localhost:3000';
   }
   
-  // Em desenvolvimento, usa localhost:3000 (backend local)
-  console.log('[Socket] 💻 Ambiente de desenvolvimento detectado');
-  return 'http://localhost:3000';
+  // Em produção - backend está no mesmo servidor que frontend
+  console.log('[Socket] 🌐 Ambiente de produção detectado');
+  return window.location.origin;
 };
 
 const SOCKET_URL = getSocketURL();
