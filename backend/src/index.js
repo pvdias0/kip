@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pool, { testConnection } from "./config/database.js";
 import { errorHandler } from "./middleware/auth.js";
+import { authLimiter, apiLimiter, passwordResetLimiter } from "./middleware/rateLimiter.js";
 import { initializeSocket } from "./utils/socket.js";
 import { migrateCategories } from "./scripts/migrate-categories.js";
 import { seedDefaultCategories } from "./scripts/seed-categories.js";
@@ -27,7 +28,21 @@ const PORT = process.env.PORT || 3000;
 // Initialize Socket.io
 initializeSocket(httpServer);
 
-// Middleware
+// Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      scriptSrc: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Disable for better compatibility
+}));
+
+// CORS
 app.use(
   cors({
     origin: ['https://kip.kler.app.br', 'http://localhost:3000', 'http://localhost:8080'],
@@ -36,15 +51,24 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
-app.use(express.json());
 
-// Health check route
+// Body parser with size limit (prevent large payload attacks)
+app.use(express.json({ limit: '10kb' }));
+
+// General API rate limiter
+app.use('/api', apiLimiter);
+
+// Health check route (no rate limit needed)
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK", message: "Backend está rodando!" });
 });
 
-// Database test route
+// Database test route (should be removed in production or protected)
 app.get("/api/db-test", async (req, res) => {
+  // Only allow in development
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ status: 'ERROR', message: 'Not found' });
+  }
   try {
     const result = await pool.query("SELECT NOW()");
     res.json({
@@ -60,7 +84,10 @@ app.get("/api/db-test", async (req, res) => {
   }
 });
 
-// API Routes
+// API Routes with rate limiting
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/forgot-password", passwordResetLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/auth", passwordResetRoutes);
 app.use("/api/categories", categoriesRoutes);

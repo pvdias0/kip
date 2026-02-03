@@ -77,10 +77,20 @@ export const deleteCategory = async (req, res) => {
     const userId = req.user.id;
     const { id } = req.params;
 
-    // Check if category exists (padrão ou do usuário)
+    // Validate ID is a number
+    const categoryId = parseInt(id, 10);
+    if (isNaN(categoryId) || categoryId <= 0) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "ID de categoria inválido",
+      });
+    }
+
+    // Check if category exists AND belongs to this user (not global categories)
+    // Security fix: users can only delete their own categories
     const category = await pool.query(
-      "SELECT * FROM categories WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)",
-      [id, userId],
+      "SELECT * FROM categories WHERE id = $1 AND user_id = $2",
+      [categoryId, userId],
     );
 
     if (category.rows.length === 0) {
@@ -90,10 +100,10 @@ export const deleteCategory = async (req, res) => {
       });
     }
 
-    // Check if category is used in any entries
+    // Check if category is used in any entries (only for this user's entries)
     const usedInEntries = await pool.query(
-      "SELECT COUNT(*) FROM entries WHERE category_id = $1",
-      [id],
+      "SELECT COUNT(*) FROM entries WHERE category_id = $1 AND user_id = $2",
+      [categoryId, userId],
     );
 
     if (usedInEntries.rows[0].count > 0) {
@@ -103,8 +113,8 @@ export const deleteCategory = async (req, res) => {
       });
     }
 
-    // Delete category
-    await pool.query("DELETE FROM categories WHERE id = $1", [id]);
+    // Delete category (with user_id check for extra security)
+    await pool.query("DELETE FROM categories WHERE id = $1 AND user_id = $2", [categoryId, userId]);
 
     res.json({
       status: "OK",
