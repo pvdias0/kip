@@ -116,7 +116,7 @@ export function KipLogo({
             {showText && (
                 <motion.span
                     className={cn(
-                        "font-display font-bold tracking-tight text-gradient",
+                        "font-display font-bold tracking-tight text-primary",
                         textSize
                     )}
                     initial={{ opacity: 0, x: -10 }}

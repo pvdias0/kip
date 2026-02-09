@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import CategoryManagement from "./pages/CategoryManagement";
+import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,9 +60,32 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Route for landing page (shows dashboard if authenticated, landing page otherwise)
+function HomeRoute() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Index />;
+  }
+
+  return <Landing />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/" element={<HomeRoute />} />
       <Route
         path="/login"
         element={
@@ -80,14 +104,6 @@ function AppRoutes() {
       />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Index />
-          </ProtectedRoute>
-        }
-      />
       <Route
         path="/dashboard"
         element={
