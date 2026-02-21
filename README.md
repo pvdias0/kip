@@ -405,6 +405,4 @@ Para dúvidas ou sugestões, por favor abra uma [issue](https://github.com/seu-u
 
 **[⬆ Voltar ao topo](#-kip---organizador-financeiro)**
 
-Feito com ❤️
-
 </div>
