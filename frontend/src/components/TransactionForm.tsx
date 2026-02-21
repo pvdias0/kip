@@ -18,8 +18,9 @@ import {
 } from "@/components/ui/dialog";
 import { TransactionType } from "@/types/finance";
 import { useCategories } from "@/hooks/useCategories";
-import { Plus, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, FileText, Calendar, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface TransactionFormProps {
   onSubmit: (transaction: {
@@ -60,22 +61,63 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     setOpen(false);
   };
 
+  const formatAmountPreview = () => {
+    if (!amount) return "R$ 0,00";
+    const num = parseFloat(amount);
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(num);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" className="gap-1 sm:gap-2 w-full xs:w-auto text-xs sm:text-base shadow-lg">
-          <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+        <Button
+          size="lg"
+          className="gap-2 w-full xs:w-auto btn-primary-glow font-semibold"
+        >
+          <Plus className="h-5 w-5" />
           <span className="hidden xs:inline">Nova Transação</span>
           <span className="xs:hidden">Nova</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[95vw] sm:max-w-md mx-auto">
-        <DialogHeader>
-          <DialogTitle className="text-base sm:text-xl">Adicionar Transação</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+      <DialogContent className="w-[95vw] sm:max-w-lg mx-auto p-0 overflow-hidden">
+        {/* Header with gradient */}
+        <div className={cn(
+          "p-6 pb-4 transition-colors duration-300",
+          type === "income"
+            ? "bg-gradient-to-r from-income/20 to-income/5"
+            : "bg-gradient-to-r from-expense/20 to-expense/5"
+        )}>
+          <DialogHeader>
+            <DialogTitle className="text-xl sm:text-2xl font-display flex items-center gap-3">
+              <motion.div
+                className={cn(
+                  "p-2.5 rounded-xl",
+                  type === "income"
+                    ? "bg-income text-income-foreground"
+                    : "bg-expense text-expense-foreground"
+                )}
+                key={type}
+                initial={{ scale: 0.8, rotate: -10 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
+              >
+                {type === "income" ? (
+                  <TrendingUp className="h-5 w-5" />
+                ) : (
+                  <TrendingDown className="h-5 w-5" />
+                )}
+              </motion.div>
+              Adicionar {type === "income" ? "Ganho" : "Gasto"}
+            </DialogTitle>
+          </DialogHeader>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 pt-2 space-y-5">
           {/* Type Toggle */}
-          <div className="flex gap-2 p-1 bg-muted rounded-lg">
+          <div className="flex gap-2 p-1.5 bg-muted rounded-xl">
             <button
               type="button"
               onClick={() => {
@@ -83,13 +125,13 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                 setCategoryId("");
               }}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all",
+                "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-300",
                 type === "income"
-                  ? "bg-income text-income-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-income text-income-foreground shadow-lg shadow-income/30"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50",
               )}
             >
-              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+              <TrendingUp className="h-4 w-4" />
               <span>Ganho</span>
             </button>
             <button
@@ -99,82 +141,127 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                 setCategoryId("");
               }}
               className={cn(
-                "flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-4 rounded-md text-xs sm:text-sm font-medium transition-all",
+                "flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-semibold transition-all duration-300",
                 type === "expense"
-                  ? "bg-expense text-expense-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-expense text-expense-foreground shadow-lg shadow-expense/30"
+                  : "text-muted-foreground hover:text-foreground hover:bg-background/50",
               )}
             >
-              <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
+              <TrendingDown className="h-4 w-4" />
               Gasto
             </button>
           </div>
 
-          {/* Amount */}
+          {/* Amount with Preview */}
           <div className="space-y-2">
-            <Label htmlFor="amount" className="text-xs sm:text-sm">Valor (R$)</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0,00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="text-sm sm:text-lg"
-              required
-            />
+            <Label htmlFor="amount" className="text-sm font-medium flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              Valor
+            </Label>
+            <div className="relative">
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0,00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="h-14 text-xl font-semibold pl-4 pr-4 border-2 focus:border-primary/50"
+                required
+              />
+              <AnimatePresence>
+                {amount && (
+                  <motion.div
+                    className="absolute -bottom-6 left-0 text-sm"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                  >
+                    <span className={cn(
+                      "font-semibold",
+                      type === "income" ? "text-income" : "text-expense"
+                    )}>
+                      {formatAmountPreview()}
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
 
           {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-xs sm:text-sm">Descrição</Label>
+          <div className="space-y-2 pt-2">
+            <Label htmlFor="description" className="text-sm font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              Descrição
+            </Label>
             <Input
               id="description"
               placeholder="Ex: Almoço no restaurante"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="text-xs sm:text-sm"
+              className="h-12 border-2 focus:border-primary/50"
               required
             />
           </div>
 
-          {/* Category */}
-          <div className="space-y-2">
-            <Label htmlFor="category" className="text-xs sm:text-sm">Categoria (Opcional)</Label>
-            <Select
-              value={categoryId || "placeholder"}
-              onValueChange={(val) =>
-                setCategoryId(val === "placeholder" ? "" : val)
-              }
-            >
-              <SelectTrigger className="text-xs sm:text-sm">
-                <SelectValue placeholder="Selecione uma categoria" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id.toString()}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Category & Date Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Category */}
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-sm font-medium flex items-center gap-2">
+                <Tag className="h-4 w-4 text-muted-foreground" />
+                Categoria
+              </Label>
+              <Select
+                value={categoryId || "placeholder"}
+                onValueChange={(val) =>
+                  setCategoryId(val === "placeholder" ? "" : val)
+                }
+              >
+                <SelectTrigger className="h-12 border-2 focus:border-primary/50">
+                  <SelectValue placeholder="Opcional" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id.toString()}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date */}
+            <div className="space-y-2">
+              <Label htmlFor="date" className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                Data
+              </Label>
+              <Input
+                id="date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-12 border-2 focus:border-primary/50"
+                required
+              />
+            </div>
           </div>
 
-          {/* Date */}
-          <div className="space-y-2">
-            <Label htmlFor="date" className="text-xs sm:text-sm">Data</Label>
-            <Input
-              id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="text-xs sm:text-sm"
-              required
-            />
-          </div>
-
-          <Button type="submit" className="w-full" size="lg">
+          {/* Submit Button */}
+          <Button
+            type="submit"
+            className={cn(
+              "w-full h-12 text-base font-semibold transition-all duration-300",
+              type === "income"
+                ? "bg-income hover:bg-income/90 income-glow"
+                : "bg-expense hover:bg-expense/90 expense-glow"
+            )}
+            size="lg"
+          >
+            <Plus className="h-5 w-5 mr-2" />
             Adicionar {type === "income" ? "Ganho" : "Gasto"}
           </Button>
         </form>

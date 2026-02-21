@@ -13,13 +13,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Wallet, BarChart3, Settings, LogOut } from "lucide-react";
+import { BarChart3, Settings, LogOut, Menu, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { KipLogo } from "@/components/ui/KipLogo";
 
 const Index = () => {
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { addTransaction, deleteTransaction } = useTransactions();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -32,18 +35,47 @@ const Index = () => {
     navigate("/login");
   };
 
+  const headerVariants = {
+    hidden: { y: -20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }
+    }
+  };
+
+  const mainVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        delay: 0.2,
+        ease: [0.25, 0.46, 0.45, 0.94]
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center justify-between gap-2 sm:gap-3">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-              <div className="rounded-lg sm:rounded-xl bg-primary p-1.5 sm:p-2 flex-shrink-0">
-                <Wallet className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
-              </div>
+      <motion.header
+        className="header-blur sticky top-0 z-50"
+        variants={headerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <div className="container-app py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
+            {/* Logo & Date */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <KipLogo size="sm" showText={false} />
               <div className="min-w-0">
-                <h1 className="text-base sm:text-lg md:text-xl font-bold text-foreground truncate">
+                <h1 className="text-lg sm:text-xl font-display font-bold text-foreground truncate">
                   Minhas Finanças
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground capitalize truncate">
@@ -51,50 +83,124 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-1">
               <Link to="/dashboard">
-                <Button variant="ghost" size="icon" title="Dashboard" className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10">
-                  <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Dashboard</span>
                 </Button>
               </Link>
               <Link to="/categories">
-                <Button variant="ghost" size="icon" title="Categorias" className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10">
-                  <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Categorias</span>
                 </Button>
               </Link>
-              <div className="hidden xs:flex">
-                <TransactionForm onSubmit={addTransaction} />
-              </div>
+              <div className="w-px h-6 bg-border mx-2" />
+              <TransactionForm onSubmit={addTransaction} />
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsLogoutDialogOpen(true)}
                 title="Sair"
-                className="h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10"
+                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-1"
               >
-                <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </nav>
+
+            {/* Mobile Menu Button */}
+            <div className="flex md:hidden items-center gap-2">
+              <TransactionForm onSubmit={addTransaction} />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="h-9 w-9"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
               </Button>
             </div>
           </div>
-          {/* Mobile button - below header on small screens */}
-          <div className="flex xs:hidden mt-3">
-            <TransactionForm onSubmit={addTransaction} />
-          </div>
+
+          {/* Mobile Menu */}
+          <AnimatePresence>
+            {isMobileMenuOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="md:hidden overflow-hidden"
+              >
+                <nav className="flex flex-col gap-1 pt-4 pb-2 border-t border-border/50 mt-4">
+                  <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 h-11"
+                    >
+                      <BarChart3 className="h-5 w-5" />
+                      <span>Dashboard</span>
+                    </Button>
+                  </Link>
+                  <Link to="/categories" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 h-11"
+                    >
+                      <Settings className="h-5 w-5" />
+                      <span>Categorias</span>
+                    </Button>
+                  </Link>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      setIsLogoutDialogOpen(true);
+                    }}
+                    className="w-full justify-start gap-3 h-11 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <LogOut className="h-5 w-5" />
+                    <span>Sair</span>
+                  </Button>
+                </nav>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </header>
+      </motion.header>
 
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Deseja sair?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-xl font-display">
+              Deseja sair?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
               Você será redirecionado para a página de login.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="flex gap-3">
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleLogoutConfirm}>
+          <div className="flex gap-3 justify-end pt-4">
+            <AlertDialogCancel className="px-6">Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogoutConfirm}
+              className="bg-destructive hover:bg-destructive/90 px-6"
+            >
               Sair
             </AlertDialogAction>
           </div>
@@ -102,16 +208,31 @@ const Index = () => {
       </AlertDialog>
 
       {/* Main Content */}
-      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 flex-1">
+      <motion.main
+        className="container-app py-6 sm:py-8 flex-1"
+        variants={mainVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <PeriodTabs onDeleteTransaction={deleteTransaction} />
-      </main>
+      </motion.main>
 
       {/* Footer */}
-      <footer className="border-t py-4 sm:py-6 mt-auto">
-        <div className="container mx-auto px-3 sm:px-4 text-center text-xs sm:text-sm text-muted-foreground">
-          <p>Organize suas finanças de forma simples e eficiente</p>
+      <motion.footer
+        className="border-t border-border/50 py-6 mt-auto backdrop-blur-sm bg-background/50"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
+        <div className="container-app text-center">
+          <p className="text-sm text-muted-foreground">
+            Organize suas finanças de forma simples e eficiente
+          </p>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            © {new Date().getFullYear()} KIP • Seu organizador financeiro
+          </p>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   );
 };

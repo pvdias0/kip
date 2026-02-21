@@ -45,13 +45,17 @@ export function useTransactions() {
   // Escutar eventos de WebSocket
   useEffect(() => {
     if (!isConnected) {
+      console.log("[Transactions] ⏳ Socket não conectado ainda");
       return;
     }
+
+    console.log("[Transactions] 🎧 Escutando eventos de WebSocket...");
 
     // Nova transação criada
     const unsubscribeCreated = on(
       "transaction:created",
       (newTransaction: any) => {
+        console.log("[Transactions] 🆕 Nova transação recebida via socket:", newTransaction);
         setTransactions((prev) => [newTransaction, ...prev]);
       },
     );
@@ -60,6 +64,7 @@ export function useTransactions() {
     const unsubscribeUpdated = on(
       "transaction:updated",
       (updatedTransaction: any) => {
+        console.log("[Transactions] ✏️  Transação atualizada via socket:", updatedTransaction);
         setTransactions((prev) =>
           prev.map((t) =>
             t.id === updatedTransaction.id ? updatedTransaction : t,
@@ -72,6 +77,7 @@ export function useTransactions() {
     const unsubscribeDeleted = on(
       "transaction:deleted",
       (data: { id: number }) => {
+        console.log("[Transactions] 🗑️  Transação deletada via socket:", data);
         setTransactions((prev) => prev.filter((t) => t.id !== data.id));
       },
     );

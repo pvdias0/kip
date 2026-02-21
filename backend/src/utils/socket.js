@@ -7,10 +7,14 @@ const userSockets = new Map(); // Map<userId, Set<socketIds>>
 export function initializeSocket(httpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+      origin: process.env.CORS_ORIGIN || ['https://kip.kler.app.br', 'http://localhost:3000', 'http://localhost:8080'],
       credentials: true,
       methods: ['GET', 'POST'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
     },
+    transports: ['websocket', 'polling'],
+    pingInterval: 25000,
+    pingTimeout: 20000,
   });
 
   // Middleware de autenticação JWT
@@ -85,10 +89,14 @@ export function getIO() {
 }
 
 export function emitToUser(userId, event, data) {
-  if (!io) return;
+  if (!io) {
+    console.warn(`[Socket] ⚠️  Socket.io not initialized, cannot emit ${event} to user ${userId}`);
+    return;
+  }
   
+  console.log(`[Socket] 📤 Emitting "${event}" to user ${userId}`, data);
   io.to(`user_${userId}`).emit(event, data);
-  console.log(`Emit to user ${userId}: ${event}`);
+  console.log(`[Socket] ✅ Event "${event}" emitted to user ${userId}`);
 }
 
 export function emitTransactionCreated(userId, transaction) {
