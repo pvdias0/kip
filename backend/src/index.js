@@ -58,7 +58,7 @@ app.use(
   cors({
     origin: [
       "https://kip.pvapps.com.br",
-      "http://kip.pvapps.com.br",  
+      "http://kip.pvapps.com.br",
       "http://localhost:3005",
       "http://localhost:8080",
     ],
