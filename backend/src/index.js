@@ -6,7 +6,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pool, { testConnection } from "./config/database.js";
 import { errorHandler } from "./middleware/auth.js";
-import { authLimiter, apiLimiter, passwordResetLimiter } from "./middleware/rateLimiter.js";
+import {
+  authLimiter,
+  apiLimiter,
+  passwordResetLimiter,
+} from "./middleware/rateLimiter.js";
 import { initializeSocket } from "./utils/socket.js";
 import { migrateCategories } from "./scripts/migrate-categories.js";
 import { seedDefaultCategories } from "./scripts/seed-categories.js";
@@ -34,23 +38,29 @@ console.log("🔍 DB Config:", {
 initializeSocket(httpServer);
 
 // Security Middleware
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'"],
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "https:"],
+        scriptSrc: ["'self'"],
+      },
     },
-  },
-  crossOriginEmbedderPolicy: false, // Disable for better compatibility
-}));
+    crossOriginEmbedderPolicy: false, // Disable for better compatibility
+  }),
+);
 
 // CORS
 app.use(
   cors({
-    origin: ['https://kip.kler.app.br', 'http://localhost:3000', 'http://localhost:8080'],
+    origin: [
+      "https://kip.kler.app.br",
+      "http://localhost:3000",
+      "http://localhost:8080",
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -58,10 +68,10 @@ app.use(
 );
 
 // Body parser with size limit (prevent large payload attacks)
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: "10kb" }));
 
 // General API rate limiter
-app.use('/api', apiLimiter);
+app.use("/api", apiLimiter);
 
 // Health check route (no rate limit needed)
 app.get("/api/health", (req, res) => {
@@ -71,8 +81,8 @@ app.get("/api/health", (req, res) => {
 // Database test route (should be removed in production or protected)
 app.get("/api/db-test", async (req, res) => {
   // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(404).json({ status: 'ERROR', message: 'Not found' });
+  if (process.env.NODE_ENV === "production") {
+    return res.status(404).json({ status: "ERROR", message: "Not found" });
   }
   try {
     const result = await pool.query("SELECT NOW()");
