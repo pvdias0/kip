@@ -26,6 +26,7 @@ A aplicação foi desenvolvida com as melhores práticas de desenvolvimento web 
 ## 🔥 Features
 
 ### 📊 Dashboard Inteligente
+
 - Visualização em tempo real de gastos mensais
 - Gráficos interativos de distribuição de categorias
 - Resumo de gastos por período (diário, semanal, mensal)
@@ -33,28 +34,33 @@ A aplicação foi desenvolvida com as melhores práticas de desenvolvimento web 
 - Navegação por meses com previsualizações
 
 ### 🏷️ Gerenciamento de Categorias
+
 - Criar, editar e deletar categorias personalizadas
 - Categorias padrão pré-configuradas
 - Associação automática de transações às categorias
 
 ### 💳 Registro de Transações
+
 - Interface simples para registrar despesas
 - Seleção de categorias intuitiva
 - Data, valor e descrição personalizáveis
 - Histórico completo de transações
 
 ### 🔐 Autenticação Segura
+
 - Sistema de login e registro robusto
 - Autenticação baseada em JWT (JSON Web Tokens)
 - Recuperação de senha via email
 - Senhas criptografadas com bcrypt
 
 ### 📱 Interface Responsiva
+
 - Design mobile-first
 - Funciona perfeitamente em desktop, tablet e dispositivos móveis
 - Interface limpa e moderna com Tailwind CSS
 
 ### ⚡ Atualizações em Tempo Real
+
 - WebSocket (Socket.io) para sincronização instantânea
 - Atualizações de categorias e transações sem precisar recarregar
 
@@ -63,6 +69,7 @@ A aplicação foi desenvolvida com as melhores práticas de desenvolvimento web 
 ## 🚀 Quick Start
 
 ### Pré-requisitos
+
 - Node.js 20+ instalado
 - PostgreSQL 14+ instalado e em execução
 - npm ou yarn como gerenciador de pacotes
@@ -71,6 +78,7 @@ A aplicação foi desenvolvida com as melhores práticas de desenvolvimento web 
 ### Instalação
 
 #### 1. Clone o repositório
+
 ```bash
 git clone https://github.com/seu-usuario/kip.git
 cd kip
@@ -135,11 +143,13 @@ A aplicação estará disponível em: `http://localhost:5173`
 ## 📋 Requisitos
 
 ### Backend
+
 - [Node.js](https://nodejs.org/) >= 20
 - [PostgreSQL](https://www.postgresql.org/) >= 14
 - npm ou yarn
 
 ### Frontend
+
 - [Node.js](https://nodejs.org/) >= 20
 - npm ou yarn
 - Navegador moderno (Chrome, Firefox, Safari, Edge)
@@ -149,6 +159,7 @@ A aplicação estará disponível em: `http://localhost:5173`
 ## 🛠️ Stack Tecnológico
 
 ### Frontend
+
 - **React 18** - Biblioteca UI
 - **TypeScript** - Type safety
 - **Vite** - Build tool ultra-rápido
@@ -162,6 +173,7 @@ A aplicação estará disponível em: `http://localhost:5173`
 - **Lucide React** - Ícones
 
 ### Backend
+
 - **Node.js** - Runtime JavaScript
 - **Express 5** - Framework web
 - **PostgreSQL** - Banco de dados relacional
@@ -240,7 +252,7 @@ kip/
 ## 🔄 Fluxo de Dados
 
 ```
-Frontend (React) 
+Frontend (React)
     ↓ HTTP / WebSocket
 Backend (Express + Socket.io)
     ↓
@@ -266,6 +278,7 @@ Persistência de Dados
 ## 📚 Scripts Disponíveis
 
 ### Backend
+
 ```bash
 npm start          # Inicia o servidor em produção
 npm run dev        # Inicia em modo desenvolvimento com hot-reload
@@ -273,6 +286,7 @@ npm run migrate    # Executa migrações do banco de dados
 ```
 
 ### Frontend
+
 ```bash
 npm run dev        # Inicia servidor de desenvolvimento
 npm run build      # Build para produção
@@ -287,6 +301,7 @@ npm run test:watch # Executa testes em modo watch
 ## 🌍 Variáveis de Ambiente
 
 ### Backend (.env)
+
 ```env
 # Banco de Dados
 DATABASE_URL=postgresql://usuario:senha@localhost:5432/kip
@@ -310,6 +325,7 @@ FRONTEND_URL=http://localhost:5173
 ```
 
 ### Frontend (.env)
+
 ```env
 VITE_API_URL=http://localhost:3000/api
 VITE_SOCKET_URL=http://localhost:3000
@@ -320,15 +336,19 @@ VITE_SOCKET_URL=http://localhost:3000
 ## 🐛 Troubleshooting
 
 ### Problema: Erro de conexão com banco de dados
+
 **Solução:** Verifique se o PostgreSQL está rodando e se as credenciais no .env estão corretas.
 
 ### Problema: CORS error ao conectar frontend com backend
+
 **Solução:** Verifique a URL do backend no .env do frontend e confirme se está sem trailing slash.
 
 ### Problema: WebSocket não conecta
+
 **Solução:** Confira se a URL do Socket.io está correta e se o backend está rodando.
 
 ### Problema: npm install falha
+
 **Solução:** Delete `node_modules` e `package-lock.json`, depois execute `npm install` novamente.
 
 ---
@@ -336,6 +356,7 @@ VITE_SOCKET_URL=http://localhost:3000
 ## 🚀 Deploy
 
 ### Deployment no Vercel (Frontend)
+
 ```bash
 npm install -g vercel
 vercel login
@@ -343,6 +364,7 @@ vercel deploy
 ```
 
 ### Deployment no Heroku/Railway (Backend)
+
 Consulte a documentação específica de cada plataforma para instruções detalhadas.
 
 ---
@@ -383,6 +405,6 @@ Para dúvidas ou sugestões, por favor abra uma [issue](https://github.com/seu-u
 
 **[⬆ Voltar ao topo](#-kip---organizador-financeiro)**
 
-Feito com ❤️ 
+Feito com ❤️
 
 </div>
