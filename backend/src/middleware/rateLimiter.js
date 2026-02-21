@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 // Rate limiter para rotas de autenticação (login/register)
 export const authLimiter = rateLimit({
@@ -10,12 +10,8 @@ export const authLimiter = rateLimit({
     },
     standardHeaders: true,
     legacyHeaders: false,
-    // Skip rate limiting for successful requests (optional)
     skipSuccessfulRequests: false,
-    // Key generator - usar IP do cliente
-    keyGenerator: (req) => {
-        return req.ip || req.headers['x-forwarded-for'] || 'unknown';
-    },
+    keyGenerator: ipKeyGenerator, // ✅ Usa o helper correto para IPv4 e IPv6
 });
 
 // Rate limiter geral para API

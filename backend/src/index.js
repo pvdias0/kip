@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import dotenv from "dotenv";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -19,11 +18,17 @@ import passwordResetRoutes from "./routes/passwordReset.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
-
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3000;
+
+console.log("🎯 Porta configurada:", PORT);
+console.log("🔍 DB Config:", {
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+});
 
 // Initialize Socket.io
 initializeSocket(httpServer);
