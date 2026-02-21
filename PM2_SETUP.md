@@ -13,20 +13,23 @@ O projeto KIP agora está configurado para rodar **frontend e backend em um úni
 ## 🚀 Opção 1: Script Automatizado (Recomendado)
 
 ### No Windows:
+
 ```cmd
 start.bat
 ```
 
 ### No Linux/Mac:
+
 ```bash
 chmod +x start.sh
 ./start.sh
 ```
 
 Este script faz tudo automaticamente:
+
 - ✅ Instala dependências do frontend
 - ✅ Faz build do frontend
-- ✅ Instala dependências do backend  
+- ✅ Instala dependências do backend
 - ✅ Inicia com PM2
 
 ---
@@ -36,24 +39,29 @@ Este script faz tudo automaticamente:
 Se preferir fazer manualmente:
 
 ### 1️⃣ Instalar dependências do frontend
+
 ```cmd
 cd frontend
 npm install
 ```
 
 ### 2️⃣ Build do frontend
+
 ```cmd
 npm run build
 ```
-*Isso gera os arquivos estáticos em `frontend/dist`*
+
+_Isso gera os arquivos estáticos em `frontend/dist`_
 
 ### 3️⃣ Instalar dependências do backend
+
 ```cmd
 cd ../backend
 npm install
 ```
 
 ### 4️⃣ Voltar para raiz e iniciar com PM2
+
 ```cmd
 cd ..
 pm2 start ecosystem.config.cjs
