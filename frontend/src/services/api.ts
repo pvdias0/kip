@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://kip.kler.app.br/api";
+const API_BASE_URL = "https://kip.pvapps.com.br/api";
 
 class ApiService {
   private token: string | null = null;

@@ -7,7 +7,7 @@ const userSockets = new Map(); // Map<userId, Set<socketIds>>
 export function initializeSocket(httpServer) {
   io = new Server(httpServer, {
     cors: {
-      origin: process.env.CORS_ORIGIN || ['https://kip.kler.app.br', 'http://localhost:3000', 'http://localhost:8080'],
+      origin: process.env.CORS_ORIGIN || ['https://kip.pvapps.com.br', 'http://localhost:3000', 'http://localhost:8080'],
       credentials: true,
       methods: ['GET', 'POST'],
       allowedHeaders: ['Content-Type', 'Authorization'],

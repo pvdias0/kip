@@ -57,8 +57,9 @@ app.use(
 app.use(
   cors({
     origin: [
-      "https://kip.kler.app.br",
-      "http://localhost:3000",
+      "https://kip.pvapps.com.br",
+      "http://kip.pvapps.com.br",  
+      "http://localhost:3005",
       "http://localhost:8080",
     ],
     credentials: true,

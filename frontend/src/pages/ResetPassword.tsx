@@ -38,7 +38,7 @@ export default function ResetPassword() {
 
       try {
         const response = await fetch(
-          `https://kip.kler.app.br/api/auth/validate-token?token=${token}`
+          `https://kip.pvapps.com.br/api/auth/validate-token?token=${token}`
         );
 
         if (response.ok) {
@@ -80,7 +80,7 @@ export default function ResetPassword() {
 
     try {
       const response = await fetch(
-        "https://kip.kler.app.br/api/auth/reset-password",
+        "https://kip.pvapps.com.br/api/auth/reset-password",
         {
           method: "POST",
           headers: {
