@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import http from "http";
+import { existsSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pool, { testConnection } from "./config/database.js";
@@ -25,19 +26,21 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const httpServer = http.createServer(app);
 const PORT = process.env.PORT || 3000;
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:8080")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-console.log("🎯 Porta configurada:", PORT);
-console.log("🔍 DB Config:", {
+console.log("Port configured:", PORT);
+console.log("DB config:", {
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
 });
 
-// Initialize Socket.io
 initializeSocket(httpServer);
 
-// Security Middleware
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -49,47 +52,36 @@ app.use(
         scriptSrc: ["'self'"],
       },
     },
-    crossOriginEmbedderPolicy: false, // Disable for better compatibility
+    crossOriginEmbedderPolicy: false,
   }),
 );
 
-// CORS
 app.use(
   cors({
-    origin: [
-      "https://kip.pvapps.com.br",
-      "http://kip.pvapps.com.br",
-      "http://localhost:3005",
-      "http://localhost:8080",
-    ],
+    origin: allowedOrigins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 
-// Body parser with size limit (prevent large payload attacks)
 app.use(express.json({ limit: "10kb" }));
-
-// General API rate limiter
 app.use("/api", apiLimiter);
 
-// Health check route (no rate limit needed)
 app.get("/api/health", (req, res) => {
-  res.json({ status: "OK", message: "Backend está rodando!" });
+  res.json({ status: "OK", message: "Backend is running" });
 });
 
-// Database test route (should be removed in production or protected)
 app.get("/api/db-test", async (req, res) => {
-  // Only allow in development
   if (process.env.NODE_ENV === "production") {
     return res.status(404).json({ status: "ERROR", message: "Not found" });
   }
+
   try {
     const result = await pool.query("SELECT NOW()");
     res.json({
       status: "OK",
-      message: "Conexão com banco bem-sucedida",
+      message: "Database connection succeeded",
       timestamp: result.rows[0].now,
     });
   } catch (err) {
@@ -100,7 +92,6 @@ app.get("/api/db-test", async (req, res) => {
   }
 });
 
-// API Routes with rate limiting
 app.use("/api/auth/login", authLimiter);
 app.use("/api/auth/register", authLimiter);
 app.use("/api/auth/forgot-password", passwordResetLimiter);
@@ -109,43 +100,33 @@ app.use("/api/auth", passwordResetRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/entries", entriesRoutes);
 
-// Serve static files from frontend build directory
 const frontendPath = path.join(__dirname, "../../frontend/dist");
-app.use(express.static(frontendPath));
+const frontendEntryPoint = path.join(frontendPath, "index.html");
 
-// SPA fallback - serve index.html for all non-API routes
-app.use((req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
-});
+if (existsSync(frontendEntryPoint)) {
+  app.use(express.static(frontendPath));
+  app.use((req, res) => {
+    res.sendFile(frontendEntryPoint);
+  });
+}
 
-// Error handler
 app.use(errorHandler);
 
-// Start server
 const startServer = async () => {
   const dbConnected = await testConnection();
 
   if (!dbConnected) {
-    console.error(
-      "⚠️ Banco de dados não está acessível. Verifique as credenciais e tente novamente.",
-    );
+    console.error("Database is not accessible. Check the credentials and try again.");
     process.exit(1);
   }
 
-  // Run migrations
   await migrateCategories();
-
-  // Seed default categories
   await seedDefaultCategories();
 
   httpServer.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando em http://localhost:${PORT}`);
-    console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
-    console.log(`📝 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🗄️  DB Test: http://localhost:${PORT}/api/db-test`);
-    console.log(`🔐 Auth routes: http://localhost:${PORT}/api/auth`);
-    console.log(`📂 Categories: http://localhost:${PORT}/api/categories`);
-    console.log(`📊 Entries: http://localhost:${PORT}/api/entries`);
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`WebSocket available on ws://localhost:${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/api/health`);
   });
 };
 

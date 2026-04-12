@@ -1,0 +1,49 @@
+services:
+  db:
+    build:
+      context: .
+      dockerfile: database/Dockerfile
+    environment:
+      POSTGRES_DB: kip
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kip"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_SOCKET_URL: ""
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: kip
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: change-me-in-production
+      CORS_ORIGIN: http://localhost:8080,http://localhost:3000
+      FRONTEND_URL: http://localhost:8080
+      BREVO_API_KEY: ""
+      BREVO_SENDER_EMAIL: noreply@kip.local
+    ports:
+      - "8080:3000"
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

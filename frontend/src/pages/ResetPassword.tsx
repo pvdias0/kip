@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Wallet, Lock, AlertCircle, Loader2, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { buildApiUrl } from "@/lib/api-config";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function ResetPassword() {
 
       try {
         const response = await fetch(
-          `https://kip.pvapps.com.br/api/auth/validate-token?token=${token}`
+          `${buildApiUrl("/auth/validate-token")}?token=${encodeURIComponent(token)}`
         );
 
         if (response.ok) {
@@ -79,20 +80,17 @@ export default function ResetPassword() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        "https://kip.pvapps.com.br/api/auth/reset-password",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            token,
-            password,
-            confirmPassword,
-          }),
-        }
-      );
+      const response = await fetch(buildApiUrl("/auth/reset-password"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token,
+          password,
+          confirmPassword,
+        }),
+      });
 
       const data = await response.json();
 

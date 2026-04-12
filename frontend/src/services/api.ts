@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://kip.pvapps.com.br/api";
+import { buildApiUrl } from "@/lib/api-config";
 
 class ApiService {
   private token: string | null = null;
@@ -20,7 +20,7 @@ class ApiService {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(buildApiUrl(endpoint), {
       ...options,
       headers,
     });
@@ -35,7 +35,6 @@ class ApiService {
     return response.json();
   }
 
-  // Auth endpoints
   async register(username: string, password: string) {
     return this.request("/auth/register", {
       method: "POST",
@@ -50,7 +49,6 @@ class ApiService {
     });
   }
 
-  // Categories endpoints
   async getCategories() {
     return this.request("/categories");
   }
@@ -72,7 +70,6 @@ class ApiService {
     return this.request(`/categories/${type}`);
   }
 
-  // Entries endpoints
   async createEntry(data: {
     type: "income" | "expense";
     amount: number;

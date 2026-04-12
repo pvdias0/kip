@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Wallet, Mail, AlertCircle, Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { buildApiUrl } from "@/lib/api-config";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export default function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("https://kip.pvapps.com.br/api/auth/forgot-password", {
+      const response = await fetch(buildApiUrl("/auth/forgot-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
