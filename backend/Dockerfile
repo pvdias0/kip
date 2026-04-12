@@ -1,9 +1,10 @@
 FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
+ENV NODE_ENV=development
 
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm ci --include=dev
 
 COPY frontend ./
 
