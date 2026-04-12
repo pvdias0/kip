@@ -9,8 +9,8 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "${DB_PORT}:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -32,8 +32,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "${APP_PORT}:${PORT}"
+    expose:
+      - "${PORT}"
     restart: unless-stopped
 
 volumes:
