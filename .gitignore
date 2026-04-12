@@ -4,10 +4,11 @@
 .env.*.local
 
 # Database
-*.sql
+
 *.db
 *.sqlite
 *.sqlite3
+!database/kip-backup-att.sql
 
 # Node modules
 node_modules/
