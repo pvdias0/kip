@@ -1,26 +1,13 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import dotenv from "dotenv";
 
 import pool from "../config/database.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const backendRoot = path.resolve(__dirname, "../..");
-const projectRoot = path.resolve(backendRoot, "..");
 const migrationsDir = path.resolve(__dirname, "../../../database/migration");
 const advisoryLockKey = 384217501;
-
-dotenv.config({
-  path: path.join(backendRoot, ".env"),
-  override: false,
-});
-
-dotenv.config({
-  path: path.join(projectRoot, ".env"),
-  override: false,
-});
 
 async function ensureSchemaMigrationsTable(client) {
   await client.query(`
@@ -75,6 +62,13 @@ export async function runMigrations() {
   const client = await pool.connect();
 
   try {
+    console.log("🔐 Migration DB credentials:", {
+      host: process.env.DB_HOST || "localhost",
+      port: process.env.DB_PORT || 5432,
+      database: process.env.DB_NAME || "kip",
+      user: process.env.DB_USER || "postgres",
+      password: process.env.DB_PASSWORD || "postgres",
+    });
     console.log("🗃️  Running database migrations...");
     await client.query("SELECT pg_advisory_lock($1)", [advisoryLockKey]);
     await ensureSchemaMigrationsTable(client);

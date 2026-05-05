@@ -135,6 +135,38 @@ export function usePaymentMethods() {
     }
   }, []);
 
+  const updatePaymentAccount = useCallback(async (id: number, name: string) => {
+    try {
+      setError(null);
+      const response = await apiService.updatePaymentAccount(id, name);
+      const updatedAccount = response.paymentAccount as PaymentAccount;
+
+      setPaymentAccounts((prev) =>
+        sortByName(
+          prev.map((account) => (account.id === id ? updatedAccount : account)),
+        ),
+      );
+
+      setPaymentMethods((prev) =>
+        prev.map((method) => ({
+          ...method,
+          accounts: sortByName(
+            method.accounts.map((account) =>
+              account.id === id ? updatedAccount : account,
+            ),
+          ),
+        })),
+      );
+
+      return updatedAccount;
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro ao atualizar conta";
+      setError(message);
+      throw err;
+    }
+  }, []);
+
   const removePaymentAccount = useCallback(async (id: number) => {
     try {
       setError(null);
@@ -230,6 +262,7 @@ export function usePaymentMethods() {
     updatePaymentMethod,
     removePaymentMethod,
     addPaymentAccount,
+    updatePaymentAccount,
     removePaymentAccount,
     linkPaymentAccount,
     unlinkPaymentAccount,

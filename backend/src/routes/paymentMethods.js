@@ -5,6 +5,7 @@ import {
   updatePaymentMethod,
   deletePaymentMethod,
   createPaymentAccount,
+  updatePaymentAccount,
   deletePaymentAccount,
   linkPaymentAccount,
   unlinkPaymentAccount,
@@ -21,6 +22,7 @@ router.put("/:id", updatePaymentMethod);
 router.delete("/:id", deletePaymentMethod);
 
 router.post("/accounts", createPaymentAccount);
+router.put("/accounts/:id", updatePaymentAccount);
 router.delete("/accounts/:id", deletePaymentAccount);
 
 router.post("/:id/accounts", linkPaymentAccount);

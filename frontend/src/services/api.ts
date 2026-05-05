@@ -107,6 +107,13 @@ class ApiService {
     });
   }
 
+  async updatePaymentAccount(id: number, name: string) {
+    return this.request(`/payment-methods/accounts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({ name }),
+    });
+  }
+
   async deletePaymentAccount(id: number) {
     return this.request(`/payment-methods/accounts/${id}`, {
       method: "DELETE",

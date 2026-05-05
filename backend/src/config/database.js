@@ -1,14 +1,24 @@
+import "./env.js";
 import pkg from "pg";
 
 const { Pool } = pkg;
 
 const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || "kip",
-  user: process.env.DB_USER || "postgres",
-  password: String(process.env.DB_PASSWORD || "postgres"),
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: String(process.env.DB_PASSWORD),
 });
+
+console.log("🧩 Database config loaded:", {
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+});
+
 
 // Test connection
 pool.on("error", (err) => {

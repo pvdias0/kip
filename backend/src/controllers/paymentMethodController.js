@@ -46,7 +46,7 @@ export const createPaymentMethod = async (req, res) => {
       `
         SELECT id
         FROM payment_methods
-        WHERE user_id = $1 AND LOWER(name) = LOWER($2)
+        WHERE user_id = $1 AND LOWER(name) = LOWER($2) AND deleted_at IS NULL
       `,
       [userId, name.trim()],
     );
@@ -120,7 +120,10 @@ export const updatePaymentMethod = async (req, res) => {
         `
           SELECT id
           FROM payment_methods
-          WHERE user_id = $1 AND LOWER(name) = LOWER($2) AND id <> $3
+          WHERE user_id = $1
+            AND LOWER(name) = LOWER($2)
+            AND id <> $3
+            AND deleted_at IS NULL
         `,
         [userId, name.trim(), paymentMethodId],
       );
@@ -192,20 +195,12 @@ export const deletePaymentMethod = async (req, res) => {
       });
     }
 
-    const usedInEntries = await pool.query(
-      "SELECT COUNT(*) FROM entries WHERE payment_method_id = $1 AND user_id = $2",
-      [paymentMethodId, userId],
-    );
-
-    if (Number(usedInEntries.rows[0].count) > 0) {
-      return res.status(400).json({
-        status: "ERROR",
-        message: "Não é possível deletar uma forma de pagamento em uso",
-      });
-    }
-
     await pool.query(
-      "DELETE FROM payment_methods WHERE id = $1 AND user_id = $2",
+      `
+        UPDATE payment_methods
+        SET deleted_at = NOW()
+        WHERE id = $1 AND user_id = $2
+      `,
       [paymentMethodId, userId],
     );
 
@@ -238,7 +233,7 @@ export const createPaymentAccount = async (req, res) => {
       `
         SELECT id
         FROM payment_accounts
-        WHERE user_id = $1 AND LOWER(name) = LOWER($2)
+        WHERE user_id = $1 AND LOWER(name) = LOWER($2) AND deleted_at IS NULL
       `,
       [userId, name.trim()],
     );
@@ -273,6 +268,82 @@ export const createPaymentAccount = async (req, res) => {
   }
 };
 
+export const updatePaymentAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const paymentAccountId = parsePositiveInt(req.params.id);
+    const { name } = req.body;
+
+    if (!paymentAccountId) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "ID de conta inválido",
+      });
+    }
+
+    const paymentAccount = await getPaymentAccountById(
+      userId,
+      paymentAccountId,
+      pool,
+    );
+
+    if (!paymentAccount) {
+      return res.status(404).json({
+        status: "ERROR",
+        message: "Conta não encontrada",
+      });
+    }
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Nome da conta é obrigatório",
+      });
+    }
+
+    const duplicate = await pool.query(
+      `
+        SELECT id
+        FROM payment_accounts
+        WHERE user_id = $1
+          AND LOWER(name) = LOWER($2)
+          AND id <> $3
+          AND deleted_at IS NULL
+      `,
+      [userId, name.trim(), paymentAccountId],
+    );
+
+    if (duplicate.rows.length > 0) {
+      return res.status(409).json({
+        status: "ERROR",
+        message: "Já existe uma conta com esse nome",
+      });
+    }
+
+    const result = await pool.query(
+      `
+        UPDATE payment_accounts
+        SET name = $1
+        WHERE id = $2 AND user_id = $3
+        RETURNING *
+      `,
+      [name.trim(), paymentAccountId, userId],
+    );
+
+    res.json({
+      status: "OK",
+      message: "Conta atualizada com sucesso",
+      paymentAccount: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Update payment account error:", error);
+    res.status(500).json({
+      status: "ERROR",
+      message: "Erro ao atualizar conta",
+    });
+  }
+};
+
 export const deletePaymentAccount = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -298,20 +369,12 @@ export const deletePaymentAccount = async (req, res) => {
       });
     }
 
-    const usedInEntries = await pool.query(
-      "SELECT COUNT(*) FROM entries WHERE payment_account_id = $1 AND user_id = $2",
-      [paymentAccountId, userId],
-    );
-
-    if (Number(usedInEntries.rows[0].count) > 0) {
-      return res.status(400).json({
-        status: "ERROR",
-        message: "Não é possível deletar uma conta em uso",
-      });
-    }
-
     await pool.query(
-      "DELETE FROM payment_accounts WHERE id = $1 AND user_id = $2",
+      `
+        UPDATE payment_accounts
+        SET deleted_at = NOW()
+        WHERE id = $1 AND user_id = $2
+      `,
       [paymentAccountId, userId],
     );
 

@@ -13,6 +13,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import CategoryManagement from "./pages/CategoryManagement";
 import PaymentMethodManagement from "./pages/PaymentMethodManagement";
+import PaymentAccountManagement from "./pages/PaymentAccountManagement";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
@@ -127,6 +128,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <PaymentMethodManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payment-accounts"
+        element={
+          <ProtectedRoute>
+            <PaymentAccountManagement />
           </ProtectedRoute>
         }
       />

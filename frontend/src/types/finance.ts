@@ -5,6 +5,7 @@ export interface PaymentAccount {
   user_id: number;
   name: string;
   created_at: string;
+  deleted_at?: string | null;
 }
 
 export interface PaymentMethod {
@@ -14,6 +15,7 @@ export interface PaymentMethod {
   accounts_enabled: boolean;
   is_default: boolean;
   created_at: string;
+  deleted_at?: string | null;
   accounts: PaymentAccount[];
 }
 

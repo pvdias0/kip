@@ -21,7 +21,7 @@ export async function ensureDefaultPaymentMethodsForUser(
         WHERE NOT EXISTS (
           SELECT 1
           FROM payment_methods
-          WHERE user_id = $1 AND LOWER(name) = LOWER($2)
+          WHERE user_id = $1 AND LOWER(name) = LOWER($2) AND deleted_at IS NULL
         )
       `,
       [userId, method.name, method.accountsEnabled],
@@ -56,14 +56,22 @@ export async function getPaymentMethodsWithAccounts(userId, client = pool) {
         ON pma.payment_method_id = pm.id
       LEFT JOIN payment_accounts pa
         ON pa.id = pma.payment_account_id
+        AND pa.deleted_at IS NULL
       WHERE pm.user_id = $1
+        AND pm.deleted_at IS NULL
       ORDER BY LOWER(pm.name), LOWER(COALESCE(pa.name, ''))
     `,
     [userId],
   );
 
   const accountsResult = await client.query(
-    "SELECT * FROM payment_accounts WHERE user_id = $1 ORDER BY LOWER(name)",
+    `
+      SELECT *
+      FROM payment_accounts
+      WHERE user_id = $1
+        AND deleted_at IS NULL
+      ORDER BY LOWER(name)
+    `,
     [userId],
   );
 
@@ -100,7 +108,13 @@ export async function getPaymentMethodsWithAccounts(userId, client = pool) {
 
 export async function getPaymentMethodById(userId, paymentMethodId, client = pool) {
   const result = await client.query(
-    "SELECT * FROM payment_methods WHERE id = $1 AND user_id = $2",
+    `
+      SELECT *
+      FROM payment_methods
+      WHERE id = $1
+        AND user_id = $2
+        AND deleted_at IS NULL
+    `,
     [paymentMethodId, userId],
   );
 
@@ -113,7 +127,13 @@ export async function getPaymentAccountById(
   client = pool,
 ) {
   const result = await client.query(
-    "SELECT * FROM payment_accounts WHERE id = $1 AND user_id = $2",
+    `
+      SELECT *
+      FROM payment_accounts
+      WHERE id = $1
+        AND user_id = $2
+        AND deleted_at IS NULL
+    `,
     [paymentAccountId, userId],
   );
 

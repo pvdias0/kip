@@ -1,15 +1,4 @@
-import path from "path";
-import { fileURLToPath } from "url";
-import dotenv from "dotenv";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ✅ Carregar .env absolutamente PRIMEIRO
-dotenv.config({
-  path: path.join(__dirname, ".env"),
-  override: false,
-});
+import "./src/config/env.js";
 
 console.log("✅ Bootstrap: Environment loaded");
 console.log("   PORT:", process.env.PORT);
