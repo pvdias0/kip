@@ -10,7 +10,7 @@ class ApiService {
   private async request(
     endpoint: string,
     options: RequestInit = {},
-  ): Promise<Record<string, unknown>> {
+  ): Promise<any> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...((options.headers as Record<string, string>) || {}),
@@ -70,11 +70,72 @@ class ApiService {
     return this.request(`/categories/${type}`);
   }
 
+  async getPaymentMethods() {
+    return this.request("/payment-methods");
+  }
+
+  async createPaymentMethod(name: string, accountsEnabled: boolean) {
+    return this.request("/payment-methods", {
+      method: "POST",
+      body: JSON.stringify({
+        name,
+        accounts_enabled: accountsEnabled,
+      }),
+    });
+  }
+
+  async updatePaymentMethod(
+    id: number,
+    data: Partial<{ name: string; accounts_enabled: boolean }>,
+  ) {
+    return this.request(`/payment-methods/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePaymentMethod(id: number) {
+    return this.request(`/payment-methods/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async createPaymentAccount(name: string) {
+    return this.request("/payment-methods/accounts", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async deletePaymentAccount(id: number) {
+    return this.request(`/payment-methods/accounts/${id}`, {
+      method: "DELETE",
+    });
+  }
+
+  async linkPaymentAccount(paymentMethodId: number, paymentAccountId: number) {
+    return this.request(`/payment-methods/${paymentMethodId}/accounts`, {
+      method: "POST",
+      body: JSON.stringify({ payment_account_id: paymentAccountId }),
+    });
+  }
+
+  async unlinkPaymentAccount(paymentMethodId: number, paymentAccountId: number) {
+    return this.request(
+      `/payment-methods/${paymentMethodId}/accounts/${paymentAccountId}`,
+      {
+        method: "DELETE",
+      },
+    );
+  }
+
   async createEntry(data: {
     type: "income" | "expense";
     amount: number;
     description: string;
     category_id?: number;
+    payment_method_id: number;
+    payment_account_id?: number;
     date: string;
   }) {
     return this.request("/entries", {
@@ -109,6 +170,8 @@ class ApiService {
       amount: number;
       description: string;
       category_id?: number;
+      payment_method_id?: number;
+      payment_account_id?: number;
       date: string;
     }>,
   ) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff, CheckCircle2, Sparkles, Target, PiggyBank } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { KipLogo } from "@/components/ui/KipLogo";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -32,7 +32,7 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!email || !password || !confirmPassword) {
@@ -94,7 +94,7 @@ export default function Register() {
 
   const strength = passwordStrength();
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -105,14 +105,14 @@ export default function Register() {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.5,
-        ease: [0.25, 0.46, 0.45, 0.94],
+        ease: [0.25, 0.46, 0.45, 0.94] as const,
       },
     },
   };

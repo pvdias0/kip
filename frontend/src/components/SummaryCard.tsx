@@ -1,7 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, type Variants } from 'framer-motion';
 
 interface SummaryCardProps {
   title: string;
@@ -30,7 +30,7 @@ export function SummaryCard({
     }).format(amount);
   };
 
-  const cardVariants = {
+  const cardVariants: Variants = {
     initial: { opacity: 0, y: 20, scale: 0.95 },
     animate: {
       opacity: 1,
@@ -38,7 +38,7 @@ export function SummaryCard({
       scale: 1,
       transition: {
         duration: 0.4,
-        ease: [0.25, 0.46, 0.45, 0.94]
+        ease: [0.25, 0.46, 0.45, 0.94] as const
       }
     },
     hover: {
@@ -50,13 +50,13 @@ export function SummaryCard({
     }
   };
 
-  const iconVariants = {
+  const iconVariants: Variants = {
     initial: { scale: 0, rotate: -180 },
     animate: {
       scale: 1,
       rotate: 0,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 200,
         damping: 15,
         delay: 0.2
@@ -64,7 +64,7 @@ export function SummaryCard({
     }
   };
 
-  const numberVariants = {
+  const numberVariants: Variants = {
     initial: { opacity: 0, scale: 0.5 },
     animate: {
       opacity: 1,

@@ -13,11 +13,10 @@ import {
   passwordResetLimiter,
 } from "./middleware/rateLimiter.js";
 import { initializeSocket } from "./utils/socket.js";
-import { migrateCategories } from "./scripts/migrate-categories.js";
-import { seedDefaultCategories } from "./scripts/seed-categories.js";
 import authRoutes from "./routes/auth.js";
 import categoriesRoutes from "./routes/categories.js";
 import entriesRoutes from "./routes/entries.js";
+import paymentMethodsRoutes from "./routes/paymentMethods.js";
 import passwordResetRoutes from "./routes/passwordReset.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -99,6 +98,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/auth", passwordResetRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/entries", entriesRoutes);
+app.use("/api/payment-methods", paymentMethodsRoutes);
 
 const frontendPath = path.join(__dirname, "../../frontend/dist");
 const frontendEntryPoint = path.join(frontendPath, "index.html");
@@ -119,9 +119,6 @@ const startServer = async () => {
     console.error("Database is not accessible. Check the credentials and try again.");
     process.exit(1);
   }
-
-  await migrateCategories();
-  await seedDefaultCategories();
 
   httpServer.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

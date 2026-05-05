@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Transaction, TransactionSummary } from "@/types/finance";
+import { Transaction, TransactionInput, TransactionSummary } from "@/types/finance";
 import {
   startOfWeek,
   endOfWeek,
@@ -90,7 +90,7 @@ export function useTransactions() {
   }, [isConnected, on]);
 
   const addTransaction = useCallback(
-    async (transaction: Omit<Transaction, "id" | "user_id" | "created_at">) => {
+    async (transaction: TransactionInput) => {
       try {
         setError(null);
         await apiService.createEntry({
@@ -98,6 +98,8 @@ export function useTransactions() {
           amount: transaction.amount,
           description: transaction.description,
           category_id: transaction.category_id,
+          payment_method_id: transaction.payment_method_id,
+          payment_account_id: transaction.payment_account_id,
           date: transaction.date,
         });
 

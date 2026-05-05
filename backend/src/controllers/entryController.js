@@ -3,16 +3,78 @@ import {
   emitTransactionCreated,
   emitTransactionUpdated,
   emitTransactionDeleted,
-  emitStatsUpdated,
 } from "../utils/socket.js";
+import { validatePaymentSelection } from "../utils/paymentMethods.js";
+
+function parsePositiveInt(value) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+function normalizeEntry(entry) {
+  return {
+    ...entry,
+    amount: parseFloat(entry.amount),
+  };
+}
+
+async function getEntryWithRelations(userId, entryId, client = pool) {
+  const result = await client.query(
+    `
+      SELECT
+        e.*,
+        pm.name AS payment_method_name,
+        pa.name AS payment_account_name
+      FROM entries e
+      LEFT JOIN payment_methods pm ON pm.id = e.payment_method_id
+      LEFT JOIN payment_accounts pa ON pa.id = e.payment_account_id
+      WHERE e.id = $1 AND e.user_id = $2
+    `,
+    [entryId, userId],
+  );
+
+  return result.rows.length > 0 ? normalizeEntry(result.rows[0]) : null;
+}
+
+function buildEntriesQuery(baseQuery, params, type, startDate, endDate) {
+  let query = baseQuery;
+
+  if (type && ["income", "expense"].includes(type)) {
+    query += " AND e.type = $" + (params.length + 1);
+    params.push(type);
+  }
+
+  if (startDate) {
+    query += " AND e.date >= $" + (params.length + 1);
+    params.push(startDate);
+  }
+
+  if (endDate) {
+    query += " AND e.date <= $" + (params.length + 1);
+    params.push(endDate);
+  }
+
+  return query;
+}
 
 // Create entry
 export const createEntry = async (req, res) => {
   try {
-    const { type, amount, description, category_id, date } = req.body;
+    const {
+      type,
+      amount,
+      description,
+      category_id,
+      payment_method_id,
+      payment_account_id,
+      date,
+    } = req.body;
     const userId = req.user.id;
 
-    // Validate inputs
     if (!type || !amount || !description || !date) {
       return res.status(400).json({
         status: "ERROR",
@@ -34,17 +96,55 @@ export const createEntry = async (req, res) => {
       });
     }
 
+    const normalizedCategoryId = category_id ? parsePositiveInt(category_id) : null;
+    const normalizedPaymentMethodId = parsePositiveInt(payment_method_id);
+    const normalizedPaymentAccountId = payment_account_id
+      ? parsePositiveInt(payment_account_id)
+      : null;
+
+    const paymentValidation = await validatePaymentSelection({
+      userId,
+      paymentMethodId: normalizedPaymentMethodId,
+      paymentAccountId: normalizedPaymentAccountId,
+      client: pool,
+    });
+
+    if (!paymentValidation.ok) {
+      return res.status(paymentValidation.status).json({
+        status: "ERROR",
+        message: paymentValidation.message,
+      });
+    }
+
     const result = await pool.query(
-      "INSERT INTO entries (user_id, category_id, type, amount, description, date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
-      [userId, category_id || null, type, amount, description, date],
+      `
+        INSERT INTO entries (
+          user_id,
+          category_id,
+          payment_method_id,
+          payment_account_id,
+          type,
+          amount,
+          description,
+          date
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id
+      `,
+      [
+        userId,
+        normalizedCategoryId,
+        normalizedPaymentMethodId,
+        paymentValidation.normalizedPaymentAccountId,
+        type,
+        amount,
+        description,
+        date,
+      ],
     );
 
-    const entry = result.rows[0];
+    const entry = await getEntryWithRelations(userId, result.rows[0].id, pool);
 
-    // Converter amount para número
-    entry.amount = parseFloat(entry.amount);
-
-    // Emit real-time update via WebSocket
     emitTransactionCreated(userId, entry);
 
     res.status(201).json({
@@ -61,43 +161,32 @@ export const createEntry = async (req, res) => {
   }
 };
 
-// Get entries (with optional filters)
+// Get entries
 export const getEntries = async (req, res) => {
   try {
     const userId = req.user.id;
     const { type, startDate, endDate } = req.query;
 
-    let query = "SELECT * FROM entries WHERE user_id = $1";
     const params = [userId];
+    let query = `
+      SELECT
+        e.*,
+        pm.name AS payment_method_name,
+        pa.name AS payment_account_name
+      FROM entries e
+      LEFT JOIN payment_methods pm ON pm.id = e.payment_method_id
+      LEFT JOIN payment_accounts pa ON pa.id = e.payment_account_id
+      WHERE e.user_id = $1
+    `;
 
-    if (type && ["income", "expense"].includes(type)) {
-      query += " AND type = $" + (params.length + 1);
-      params.push(type);
-    }
-
-    if (startDate) {
-      query += " AND date >= $" + (params.length + 1);
-      params.push(startDate);
-    }
-
-    if (endDate) {
-      query += " AND date <= $" + (params.length + 1);
-      params.push(endDate);
-    }
-
-    query += " ORDER BY date DESC, created_at DESC";
+    query = buildEntriesQuery(query, params, type, startDate, endDate);
+    query += " ORDER BY e.date DESC, e.created_at DESC";
 
     const result = await pool.query(query, params);
 
-    // Converter amounts para número
-    const entries = result.rows.map((entry) => ({
-      ...entry,
-      amount: parseFloat(entry.amount),
-    }));
-
     res.json({
       status: "OK",
-      entries,
+      entries: result.rows.map(normalizeEntry),
     });
   } catch (error) {
     console.error("Get entries error:", error);
@@ -111,23 +200,14 @@ export const getEntries = async (req, res) => {
 // Get entry by ID
 export const getEntryById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.id;
+    const entry = await getEntryWithRelations(req.user.id, req.params.id, pool);
 
-    const result = await pool.query(
-      "SELECT * FROM entries WHERE id = $1 AND user_id = $2",
-      [id, userId],
-    );
-
-    if (result.rows.length === 0) {
+    if (!entry) {
       return res.status(404).json({
         status: "ERROR",
         message: "Entrada não encontrada",
       });
     }
-
-    const entry = result.rows[0];
-    entry.amount = parseFloat(entry.amount);
 
     res.json({
       status: "OK",
@@ -146,42 +226,109 @@ export const getEntryById = async (req, res) => {
 export const updateEntry = async (req, res) => {
   try {
     const { id } = req.params;
-    const { type, amount, description, category_id, date } = req.body;
     const userId = req.user.id;
 
-    // Validate inputs
-    if (amount && amount <= 0) {
-      return res.status(400).json({
-        status: "ERROR",
-        message: "Valor deve ser maior que zero",
-      });
-    }
-
-    if (type && !["income", "expense"].includes(type)) {
-      return res.status(400).json({
-        status: "ERROR",
-        message: 'Tipo inválido. Deve ser "income" ou "expense"',
-      });
-    }
-
-    const result = await pool.query(
-      "UPDATE entries SET type = COALESCE($1, type), amount = COALESCE($2, amount), description = COALESCE($3, description), category_id = COALESCE($4, category_id), date = COALESCE($5, date) WHERE id = $6 AND user_id = $7 RETURNING *",
-      [type, amount, description, category_id, date, id, userId],
+    const existingResult = await pool.query(
+      "SELECT * FROM entries WHERE id = $1 AND user_id = $2",
+      [id, userId],
     );
 
-    if (result.rows.length === 0) {
+    if (existingResult.rows.length === 0) {
       return res.status(404).json({
         status: "ERROR",
         message: "Entrada não encontrada",
       });
     }
 
-    const entry = result.rows[0];
+    const existingEntry = existingResult.rows[0];
+    const payload = req.body;
 
-    // Converter amount para número
-    entry.amount = parseFloat(entry.amount);
+    if (payload.amount && payload.amount <= 0) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Valor deve ser maior que zero",
+      });
+    }
 
-    // Emit real-time update via WebSocket
+    if (payload.type && !["income", "expense"].includes(payload.type)) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: 'Tipo inválido. Deve ser "income" ou "expense"',
+      });
+    }
+
+    const nextCategoryId = hasOwn(payload, "category_id")
+      ? payload.category_id
+        ? parsePositiveInt(payload.category_id)
+        : null
+      : existingEntry.category_id;
+
+    const nextPaymentMethodId = hasOwn(payload, "payment_method_id")
+      ? payload.payment_method_id
+        ? parsePositiveInt(payload.payment_method_id)
+        : null
+      : existingEntry.payment_method_id;
+
+    const nextPaymentAccountId = hasOwn(payload, "payment_account_id")
+      ? payload.payment_account_id
+        ? parsePositiveInt(payload.payment_account_id)
+        : null
+      : existingEntry.payment_account_id;
+
+    const shouldValidatePayment =
+      hasOwn(payload, "payment_method_id") ||
+      hasOwn(payload, "payment_account_id") ||
+      existingEntry.payment_method_id !== null;
+
+    let normalizedPaymentAccountId = nextPaymentAccountId;
+
+    if (shouldValidatePayment) {
+      const paymentValidation = await validatePaymentSelection({
+        userId,
+        paymentMethodId: nextPaymentMethodId,
+        paymentAccountId: nextPaymentAccountId,
+        client: pool,
+      });
+
+      if (!paymentValidation.ok) {
+        return res.status(paymentValidation.status).json({
+          status: "ERROR",
+          message: paymentValidation.message,
+        });
+      }
+
+      normalizedPaymentAccountId = paymentValidation.normalizedPaymentAccountId;
+    }
+
+    const result = await pool.query(
+      `
+        UPDATE entries
+        SET
+          type = $1,
+          amount = $2,
+          description = $3,
+          category_id = $4,
+          payment_method_id = $5,
+          payment_account_id = $6,
+          date = $7
+        WHERE id = $8 AND user_id = $9
+        RETURNING id
+      `,
+      [
+        payload.type ?? existingEntry.type,
+        payload.amount ?? existingEntry.amount,
+        payload.description ?? existingEntry.description,
+        nextCategoryId,
+        nextPaymentMethodId,
+        normalizedPaymentAccountId,
+        payload.date ?? existingEntry.date,
+        id,
+        userId,
+      ],
+    );
+
+    const entry = await getEntryWithRelations(userId, result.rows[0].id, pool);
+
     emitTransactionUpdated(userId, entry);
 
     res.json({
@@ -216,10 +363,7 @@ export const deleteEntry = async (req, res) => {
       });
     }
 
-    const entryId = result.rows[0].id;
-
-    // Emit real-time update via WebSocket
-    emitTransactionDeleted(userId, entryId);
+    emitTransactionDeleted(userId, result.rows[0].id);
 
     res.json({
       status: "OK",
@@ -240,21 +384,12 @@ export const getStats = async (req, res) => {
     const userId = req.user.id;
     const { startDate, endDate } = req.query;
 
-    let query =
-      "SELECT type, SUM(amount) as total FROM entries WHERE user_id = $1";
     const params = [userId];
+    let query =
+      "SELECT e.type, SUM(e.amount) as total FROM entries e WHERE e.user_id = $1";
 
-    if (startDate) {
-      query += " AND date >= $" + (params.length + 1);
-      params.push(startDate);
-    }
-
-    if (endDate) {
-      query += " AND date <= $" + (params.length + 1);
-      params.push(endDate);
-    }
-
-    query += " GROUP BY type";
+    query = buildEntriesQuery(query, params, null, startDate, endDate);
+    query += " GROUP BY e.type";
 
     const result = await pool.query(query, params);
 

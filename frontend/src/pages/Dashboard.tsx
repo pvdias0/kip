@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft,
+  CreditCard,
   TrendingUp,
   TrendingDown,
   Wallet,
@@ -29,7 +30,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { addMonths, subMonths, isSameMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Dashboard = () => {
@@ -63,7 +64,7 @@ const Dashboard = () => {
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -74,26 +75,26 @@ const Dashboard = () => {
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: 0.5,
-        ease: [0.25, 0.46, 0.45, 0.94],
+        ease: [0.25, 0.46, 0.45, 0.94] as const,
       },
     },
   };
 
-  const headerVariants = {
+  const headerVariants: Variants = {
     hidden: { y: -20, opacity: 0 },
     visible: {
       y: 0,
       opacity: 1,
       transition: {
         duration: 0.5,
-        ease: [0.25, 0.46, 0.45, 0.94]
+        ease: [0.25, 0.46, 0.45, 0.94] as const
       }
     }
   };
@@ -153,6 +154,16 @@ const Dashboard = () => {
                   <span>Categorias</span>
                 </Button>
               </Link>
+              <Link to="/payment-methods">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  <span>Pagamentos</span>
+                </Button>
+              </Link>
               <ThemeToggle />
               <div className="w-px h-6 bg-border mx-2" />
               <Button
@@ -210,6 +221,18 @@ const Dashboard = () => {
                     >
                       <Settings className="h-5 w-5" />
                       <span>Categorias</span>
+                    </Button>
+                  </Link>
+                  <Link
+                    to="/payment-methods"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 h-11"
+                    >
+                      <CreditCard className="h-5 w-5" />
+                      <span>Pagamentos</span>
                     </Button>
                   </Link>
                   <ThemeToggle
@@ -321,6 +344,52 @@ const Dashboard = () => {
             <CategoryChart
               data={stats.expenseCategoryData}
               title="Para onde vão os Gastos"
+              type="expense"
+              emptyMessage="Nenhum gasto registrado"
+            />
+          </div>
+        </motion.section>
+
+        <motion.section variants={itemVariants}>
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-display font-semibold text-foreground">
+              Distribuição por Forma de Pagamento
+            </h2>
+            <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CategoryChart
+              data={stats.incomePaymentMethodData}
+              title="Ganhos por forma"
+              type="income"
+              emptyMessage="Nenhum ganho registrado"
+            />
+            <CategoryChart
+              data={stats.expensePaymentMethodData}
+              title="Gastos por forma"
+              type="expense"
+              emptyMessage="Nenhum gasto registrado"
+            />
+          </div>
+        </motion.section>
+
+        <motion.section variants={itemVariants}>
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-display font-semibold text-foreground">
+              Distribuição por Conta de Pagamento
+            </h2>
+            <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CategoryChart
+              data={stats.incomePaymentAccountData}
+              title="Ganhos por conta"
+              type="income"
+              emptyMessage="Nenhum ganho registrado"
+            />
+            <CategoryChart
+              data={stats.expensePaymentAccountData}
+              title="Gastos por conta"
               type="expense"
               emptyMessage="Nenhum gasto registrado"
             />

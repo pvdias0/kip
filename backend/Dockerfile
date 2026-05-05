@@ -24,6 +24,7 @@ RUN npm ci --omit=dev
 
 COPY backend/bootstrap.js ./
 COPY backend/src ./src
+COPY database/migration /app/database/migration
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
 EXPOSE 3000

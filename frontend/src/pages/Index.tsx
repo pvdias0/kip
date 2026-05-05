@@ -13,11 +13,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { BarChart3, Settings, LogOut, Menu, X } from "lucide-react";
+import { BarChart3, CreditCard, Settings, LogOut, Menu, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { KipLogo } from "@/components/ui/KipLogo";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
@@ -36,19 +36,19 @@ const Index = () => {
     navigate("/login");
   };
 
-  const headerVariants = {
+  const headerVariants: Variants = {
     hidden: { y: -20, opacity: 0 },
     visible: {
       y: 0,
       opacity: 1,
       transition: {
         duration: 0.5,
-        ease: [0.25, 0.46, 0.45, 0.94]
+        ease: [0.25, 0.46, 0.45, 0.94] as const
       }
     }
   };
 
-  const mainVariants = {
+  const mainVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
       opacity: 1,
@@ -56,7 +56,7 @@ const Index = () => {
       transition: {
         duration: 0.5,
         delay: 0.2,
-        ease: [0.25, 0.46, 0.45, 0.94]
+        ease: [0.25, 0.46, 0.45, 0.94] as const
       }
     }
   };
@@ -105,6 +105,16 @@ const Index = () => {
                 >
                   <Settings className="h-4 w-4" />
                   <span>Categorias</span>
+                </Button>
+              </Link>
+              <Link to="/payment-methods">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  <CreditCard className="h-4 w-4" />
+                  <span>Pagamentos</span>
                 </Button>
               </Link>
               <ThemeToggle />
@@ -166,6 +176,18 @@ const Index = () => {
                     >
                       <Settings className="h-5 w-5" />
                       <span>Categorias</span>
+                    </Button>
+                  </Link>
+                  <Link
+                    to="/payment-methods"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Button
+                      variant="ghost"
+                      className="w-full justify-start gap-3 h-11"
+                    >
+                      <CreditCard className="h-5 w-5" />
+                      <span>Pagamentos</span>
                     </Button>
                   </Link>
                   <ThemeToggle

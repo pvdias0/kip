@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown, Trophy, Medal, Award, Star } from "lucide-rea
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 
 interface RankingListProps {
   transactions: Transaction[];
@@ -52,7 +52,7 @@ export function RankingList({
     }
   };
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -63,7 +63,7 @@ export function RankingList({
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 20, scale: 0.95 },
     visible: {
       opacity: 1,
@@ -71,7 +71,7 @@ export function RankingList({
       scale: 1,
       transition: {
         duration: 0.4,
-        ease: [0.25, 0.46, 0.45, 0.94],
+        ease: [0.25, 0.46, 0.45, 0.94] as const,
       },
     },
   };

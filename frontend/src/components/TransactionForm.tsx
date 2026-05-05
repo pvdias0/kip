@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,16 +17,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { TransactionType } from "@/types/finance";
+import { TransactionInput, TransactionType } from "@/types/finance";
 import { useCategories } from "@/hooks/useCategories";
+import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { toast } from "@/components/ui/use-toast";
 import {
   Plus,
   TrendingUp,
   TrendingDown,
+  CreditCard,
   DollarSign,
   FileText,
   Calendar,
+  Landmark,
+  Link2,
   Tag,
   Loader2,
 } from "lucide-react";
@@ -34,17 +38,15 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface TransactionFormProps {
-  onSubmit: (transaction: {
-    type: TransactionType;
-    amount: number;
-    description: string;
-    category_id?: number;
-    date: string;
-  }) => void;
+  onSubmit: (transaction: TransactionInput) => void;
 }
 
 const NO_CATEGORY_VALUE = "__no_category__";
 const CREATE_CATEGORY_VALUE = "__create_category__";
+const NO_PAYMENT_METHOD_VALUE = "__no_payment_method__";
+const NO_PAYMENT_ACCOUNT_VALUE = "__no_payment_account__";
+const CREATE_PAYMENT_ACCOUNT_VALUE = "__create_payment_account__";
+const LINK_PAYMENT_ACCOUNT_VALUE = "__link_payment_account__";
 
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [open, setOpen] = useState(false);
@@ -52,19 +54,40 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
+  const [paymentMethodId, setPaymentMethodId] = useState<string>("");
+  const [paymentAccountId, setPaymentAccountId] = useState<string>("");
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [isCreatingPaymentAccount, setIsCreatingPaymentAccount] = useState(false);
+  const [isLinkingPaymentAccount, setIsLinkingPaymentAccount] = useState(false);
+  const [newPaymentAccountName, setNewPaymentAccountName] = useState("");
+  const [existingPaymentAccountIdToLink, setExistingPaymentAccountIdToLink] =
+    useState("");
+  const [isSavingPaymentAccount, setIsSavingPaymentAccount] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const { categories, addCategory } = useCategories();
+  const {
+    paymentMethods,
+    paymentAccounts,
+    addPaymentAccount,
+    linkPaymentAccount,
+  } = usePaymentMethods();
 
   const resetForm = () => {
     setAmount("");
     setDescription("");
     setCategoryId("");
+    setPaymentMethodId("");
+    setPaymentAccountId("");
     setNewCategoryName("");
+    setNewPaymentAccountName("");
+    setExistingPaymentAccountIdToLink("");
     setIsCreatingCategory(false);
+    setIsCreatingPaymentAccount(false);
+    setIsLinkingPaymentAccount(false);
     setIsSavingCategory(false);
+    setIsSavingPaymentAccount(false);
     setDate(new Date().toISOString().split("T")[0]);
   };
 
@@ -74,18 +97,54 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     if (!nextOpen) {
       setIsCreatingCategory(false);
       setNewCategoryName("");
+      setIsCreatingPaymentAccount(false);
+      setIsLinkingPaymentAccount(false);
+      setNewPaymentAccountName("");
+      setExistingPaymentAccountIdToLink("");
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const selectedPaymentMethod = paymentMethods.find(
+    (method) => method.id.toString() === paymentMethodId,
+  );
+  const linkedPaymentAccounts = selectedPaymentMethod?.accounts || [];
+  const availablePaymentAccountsToLink = paymentAccounts.filter(
+    (account) =>
+      !linkedPaymentAccounts.some((linkedAccount) => linkedAccount.id === account.id),
+  );
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!amount || !description) return;
+
+    if (!paymentMethodId) {
+      toast({
+        variant: "destructive",
+        title: "Forma de pagamento obrigatoria",
+        description: "Selecione a forma de pagamento da transacao.",
+      });
+      return;
+    }
+
+    if (selectedPaymentMethod?.accounts_enabled && !paymentAccountId) {
+      toast({
+        variant: "destructive",
+        title: "Conta obrigatoria",
+        description:
+          "Selecione a conta da forma de pagamento antes de salvar a transacao.",
+      });
+      return;
+    }
 
     onSubmit({
       type,
       amount: parseFloat(amount),
       description,
       category_id: categoryId ? parseInt(categoryId) : undefined,
+      payment_method_id: parseInt(paymentMethodId, 10),
+      payment_account_id: paymentAccountId
+        ? parseInt(paymentAccountId, 10)
+        : undefined,
       date,
     });
 
@@ -124,6 +183,76 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       });
     } finally {
       setIsSavingCategory(false);
+    }
+  };
+
+  const handleCreatePaymentAccount = async () => {
+    const trimmedName = newPaymentAccountName.trim();
+
+    if (!trimmedName || !selectedPaymentMethod) {
+      toast({
+        variant: "destructive",
+        title: "Conta invalida",
+        description: "Informe um nome e selecione uma forma de pagamento.",
+      });
+      return;
+    }
+
+    try {
+      setIsSavingPaymentAccount(true);
+      const createdAccount = await addPaymentAccount(trimmedName);
+      await linkPaymentAccount(selectedPaymentMethod.id, createdAccount.id);
+      setPaymentAccountId(createdAccount.id.toString());
+      setNewPaymentAccountName("");
+      setIsCreatingPaymentAccount(false);
+      toast({
+        title: "Conta criada",
+        description: `"${createdAccount.name}" foi vinculada e selecionada.`,
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Nao foi possivel criar a conta",
+        description:
+          err instanceof Error ? err.message : "Tente novamente em instantes.",
+      });
+    } finally {
+      setIsSavingPaymentAccount(false);
+    }
+  };
+
+  const handleLinkExistingPaymentAccount = async () => {
+    if (!selectedPaymentMethod || !existingPaymentAccountIdToLink) {
+      toast({
+        variant: "destructive",
+        title: "Selecione uma conta",
+        description: "Escolha uma conta existente para vincular.",
+      });
+      return;
+    }
+
+    try {
+      setIsSavingPaymentAccount(true);
+      await linkPaymentAccount(
+        selectedPaymentMethod.id,
+        parseInt(existingPaymentAccountIdToLink, 10),
+      );
+      setPaymentAccountId(existingPaymentAccountIdToLink);
+      setExistingPaymentAccountIdToLink("");
+      setIsLinkingPaymentAccount(false);
+      toast({
+        title: "Conta vinculada",
+        description: "A conta foi vinculada e selecionada na transacao.",
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Nao foi possivel vincular a conta",
+        description:
+          err instanceof Error ? err.message : "Tente novamente em instantes.",
+      });
+    } finally {
+      setIsSavingPaymentAccount(false);
     }
   };
 
@@ -272,8 +401,8 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
             />
           </div>
 
-          {/* Category & Date Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Category, Payment Method & Date */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Category */}
             <div className="space-y-2">
               <Label htmlFor="category" className="text-sm font-medium flex items-center gap-2">
@@ -373,6 +502,50 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               )}
             </div>
 
+            {/* Payment Method */}
+            <div className="space-y-2">
+              <Label
+                htmlFor="paymentMethod"
+                className="text-sm font-medium flex items-center gap-2"
+              >
+                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                Forma de Pagamento
+              </Label>
+              <Select
+                value={paymentMethodId || NO_PAYMENT_METHOD_VALUE}
+                onValueChange={(value) => {
+                  if (value === NO_PAYMENT_METHOD_VALUE) {
+                    setPaymentMethodId("");
+                    setPaymentAccountId("");
+                    setIsCreatingPaymentAccount(false);
+                    setIsLinkingPaymentAccount(false);
+                    return;
+                  }
+
+                  setPaymentMethodId(value);
+                  setPaymentAccountId("");
+                  setExistingPaymentAccountIdToLink("");
+                  setNewPaymentAccountName("");
+                  setIsCreatingPaymentAccount(false);
+                  setIsLinkingPaymentAccount(false);
+                }}
+              >
+                <SelectTrigger className="h-12 border-2 focus:border-primary/50">
+                  <SelectValue placeholder="Selecione a forma" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value={NO_PAYMENT_METHOD_VALUE}>
+                    Selecione a forma
+                  </SelectItem>
+                  {paymentMethods.map((method) => (
+                    <SelectItem key={method.id} value={method.id.toString()}>
+                      {method.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Date */}
             <div className="space-y-2">
               <Label htmlFor="date" className="text-sm font-medium flex items-center gap-2">
@@ -390,10 +563,205 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
             </div>
           </div>
 
+          {/* Payment Account */}
+          {selectedPaymentMethod?.accounts_enabled ? (
+            <div className="space-y-3 rounded-xl border border-border/60 bg-muted/20 p-4">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="paymentAccount"
+                  className="text-sm font-medium flex items-center gap-2"
+                >
+                  <Landmark className="h-4 w-4 text-muted-foreground" />
+                  Conta da Forma de Pagamento
+                </Label>
+                <Select
+                  value={paymentAccountId || NO_PAYMENT_ACCOUNT_VALUE}
+                  onValueChange={(value) => {
+                    if (value === CREATE_PAYMENT_ACCOUNT_VALUE) {
+                      setIsCreatingPaymentAccount(true);
+                      setIsLinkingPaymentAccount(false);
+                      setPaymentAccountId("");
+                      return;
+                    }
+
+                    if (value === LINK_PAYMENT_ACCOUNT_VALUE) {
+                      setIsLinkingPaymentAccount(true);
+                      setIsCreatingPaymentAccount(false);
+                      setPaymentAccountId("");
+                      return;
+                    }
+
+                    if (value === NO_PAYMENT_ACCOUNT_VALUE) {
+                      setPaymentAccountId("");
+                      setIsCreatingPaymentAccount(false);
+                      setIsLinkingPaymentAccount(false);
+                      return;
+                    }
+
+                    setPaymentAccountId(value);
+                    setIsCreatingPaymentAccount(false);
+                    setIsLinkingPaymentAccount(false);
+                  }}
+                >
+                  <SelectTrigger className="h-12 border-2 focus:border-primary/50">
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value={NO_PAYMENT_ACCOUNT_VALUE}>
+                      Selecione a conta
+                    </SelectItem>
+                    {linkedPaymentAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id.toString()}>
+                        {account.name}
+                      </SelectItem>
+                    ))}
+                    <SelectSeparator />
+                    <SelectItem value={CREATE_PAYMENT_ACCOUNT_VALUE}>
+                      <span className="flex items-center gap-2">
+                        <Plus className="h-4 w-4" />
+                        Criar nova conta
+                      </span>
+                    </SelectItem>
+                    <SelectItem value={LINK_PAYMENT_ACCOUNT_VALUE}>
+                      <span className="flex items-center gap-2">
+                        <Link2 className="h-4 w-4" />
+                        Vincular conta existente
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {linkedPaymentAccounts.length === 0 &&
+              !isCreatingPaymentAccount &&
+              !isLinkingPaymentAccount ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma conta vinculada ainda. Crie ou vincule uma conta para esta forma.
+                </p>
+              ) : null}
+
+              {isCreatingPaymentAccount ? (
+                <div className="space-y-3 rounded-xl border border-border/60 bg-background/70 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-foreground">
+                      Nova conta para {selectedPaymentMethod.name}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsCreatingPaymentAccount(false);
+                        setNewPaymentAccountName("");
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                  <Input
+                    value={newPaymentAccountName}
+                    onChange={(e) => setNewPaymentAccountName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleCreatePaymentAccount();
+                      }
+                    }}
+                    placeholder="Ex: Cartão Banco X"
+                    className="h-11 border-2 focus:border-primary/50"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleCreatePaymentAccount}
+                    disabled={isSavingPaymentAccount || !newPaymentAccountName.trim()}
+                    className="w-full sm:w-auto"
+                  >
+                    {isSavingPaymentAccount ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Criar conta
+                      </>
+                    )}
+                  </Button>
+                </div>
+              ) : null}
+
+              {isLinkingPaymentAccount ? (
+                <div className="space-y-3 rounded-xl border border-border/60 bg-background/70 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-foreground">
+                      Vincular conta existente
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsLinkingPaymentAccount(false);
+                        setExistingPaymentAccountIdToLink("");
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                  <select
+                    className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={existingPaymentAccountIdToLink}
+                    onChange={(e) => setExistingPaymentAccountIdToLink(e.target.value)}
+                  >
+                    <option value="">Selecione uma conta</option>
+                    {availablePaymentAccountsToLink.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleLinkExistingPaymentAccount}
+                    disabled={
+                      isSavingPaymentAccount ||
+                      availablePaymentAccountsToLink.length === 0 ||
+                      !existingPaymentAccountIdToLink
+                    }
+                    className="w-full sm:w-auto"
+                  >
+                    {isSavingPaymentAccount ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Vinculando...
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="mr-2 h-4 w-4" />
+                        Vincular conta
+                      </>
+                    )}
+                  </Button>
+                  {availablePaymentAccountsToLink.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Todas as contas já estão vinculadas a esta forma.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          ) : selectedPaymentMethod ? (
+            <div className="rounded-xl border border-dashed border-border/60 bg-muted/15 p-4 text-sm text-muted-foreground">
+              {selectedPaymentMethod.name} não exige conta vinculada.
+            </div>
+          ) : null}
+
           {/* Submit Button */}
           <Button
             type="submit"
-            disabled={isSavingCategory}
+            disabled={isSavingCategory || isSavingPaymentAccount}
             className={cn(
               "w-full h-12 text-base font-semibold transition-all duration-300",
               type === "income"

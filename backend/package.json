@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node bootstrap.js",
-    "dev": "node --watch bootstrap.js"
+    "dev": "node --watch bootstrap.js",
+    "migrate": "node src/scripts/run-migrations.js"
   },
   "keywords": [],
   "author": "",

@@ -10,6 +10,29 @@ export function useTransactionStats(
   const { getCategoryName } = useCategoryNames();
 
   return useMemo(() => {
+    const aggregateByLabel = (
+      items: Transaction[],
+      getLabel: (transaction: Transaction) => string,
+    ) => {
+      const grouped = items.reduce(
+        (acc, transaction) => {
+          const label = getLabel(transaction);
+          const amount =
+            typeof transaction.amount === "string"
+              ? parseFloat(transaction.amount)
+              : transaction.amount;
+
+          acc[label] = (acc[label] || 0) + (isNaN(amount) ? 0 : amount);
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
+
+      return Object.entries(grouped)
+        .map(([category, amount]) => ({ category, amount }))
+        .sort((a, b) => b.amount - a.amount);
+    };
+
     // Filter transactions for the selected month
     const monthStart = startOfMonth(selectedMonth);
     const monthEnd = endOfMonth(selectedMonth);
@@ -33,39 +56,33 @@ export function useTransactionStats(
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5);
 
-    // Category breakdown for expenses
-    const expensesByCategory = expenses.reduce(
-      (acc, t) => {
-        const categoryName = getCategoryName(t.category_id);
-        const amount =
-          typeof t.amount === "string" ? parseFloat(t.amount) : t.amount;
-        acc[categoryName] =
-          (acc[categoryName] || 0) + (isNaN(amount) ? 0 : amount);
-        return acc;
-      },
-      {} as Record<string, number>,
+    const getPaymentMethodLabel = (transaction: Transaction) =>
+      transaction.payment_method_name?.trim() || "Sem forma de pagamento";
+    const getPaymentAccountLabel = (transaction: Transaction) =>
+      transaction.payment_account_name?.trim() || "Sem conta vinculada";
+
+    const expenseCategoryData = aggregateByLabel(expenses, (transaction) =>
+      getCategoryName(transaction.category_id),
     );
-
-    const expenseCategoryData = Object.entries(expensesByCategory)
-      .map(([category, amount]) => ({ category, amount }))
-      .sort((a, b) => b.amount - a.amount);
-
-    // Category breakdown for incomes
-    const incomesByCategory = incomes.reduce(
-      (acc, t) => {
-        const categoryName = getCategoryName(t.category_id);
-        const amount =
-          typeof t.amount === "string" ? parseFloat(t.amount) : t.amount;
-        acc[categoryName] =
-          (acc[categoryName] || 0) + (isNaN(amount) ? 0 : amount);
-        return acc;
-      },
-      {} as Record<string, number>,
+    const incomeCategoryData = aggregateByLabel(incomes, (transaction) =>
+      getCategoryName(transaction.category_id),
     );
-
-    const incomeCategoryData = Object.entries(incomesByCategory)
-      .map(([category, amount]) => ({ category, amount }))
-      .sort((a, b) => b.amount - a.amount);
+    const expensePaymentMethodData = aggregateByLabel(
+      expenses,
+      getPaymentMethodLabel,
+    );
+    const incomePaymentMethodData = aggregateByLabel(
+      incomes,
+      getPaymentMethodLabel,
+    );
+    const expensePaymentAccountData = aggregateByLabel(
+      expenses,
+      getPaymentAccountLabel,
+    );
+    const incomePaymentAccountData = aggregateByLabel(
+      incomes,
+      getPaymentAccountLabel,
+    );
 
     // Totals - Converter para número se for string
     const totalIncome = incomes.reduce((sum, t) => {
@@ -85,6 +102,10 @@ export function useTransactionStats(
       topIncomes,
       expenseCategoryData,
       incomeCategoryData,
+      expensePaymentMethodData,
+      incomePaymentMethodData,
+      expensePaymentAccountData,
+      incomePaymentAccountData,
       totalIncome,
       totalExpense,
       balance: totalIncome - totalExpense,

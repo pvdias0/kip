@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -31,7 +31,7 @@ export function TransactionList({
   title = "Transações Recentes",
   maxHeight = "400px",
 }: TransactionListProps) {
-  const [openDelete, setOpenDelete] = useState<string | null>(null);
+  const [openDelete, setOpenDelete] = useState<number | null>(null);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -44,7 +44,7 @@ export function TransactionList({
     return format(parseISO(dateStr), "dd 'de' MMM", { locale: ptBR });
   };
 
-  const containerVariants = {
+  const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
@@ -55,7 +55,7 @@ export function TransactionList({
     },
   };
 
-  const itemVariants = {
+  const itemVariants: Variants = {
     hidden: { opacity: 0, y: 10, scale: 0.98 },
     visible: {
       opacity: 1,
@@ -63,7 +63,7 @@ export function TransactionList({
       scale: 1,
       transition: {
         duration: 0.3,
-        ease: [0.25, 0.46, 0.45, 0.94],
+        ease: [0.25, 0.46, 0.45, 0.94] as const,
       },
     },
     exit: {
@@ -250,7 +250,7 @@ export function TransactionList({
                           </AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => {
-                              onDelete(transaction.id);
+                              onDelete(String(transaction.id));
                               setOpenDelete(null);
                             }}
                             className="flex-1 h-11 bg-destructive hover:bg-destructive/90"

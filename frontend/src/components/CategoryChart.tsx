@@ -215,7 +215,7 @@ export function CategoryChart({
                     className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-offset-2 ring-offset-card transition-transform group-hover:scale-110"
                     style={{
                       backgroundColor: colors[index % colors.length],
-                      ringColor: colors[index % colors.length],
+                      boxShadow: `0 0 0 2px ${colors[index % colors.length]}`,
                     }}
                   />
                   <span className="truncate font-medium">{item.category}</span>

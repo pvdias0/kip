@@ -1,10 +1,15 @@
 import pool from "../config/database.js";
 import { hashPassword, comparePassword } from "../utils/password.js";
 import { generateToken } from "../utils/jwt.js";
+import { ensureDefaultPaymentMethodsForUser } from "../utils/paymentMethods.js";
 
 // Register
 export const register = async (req, res, next) => {
+  const client = await pool.connect();
+
   try {
+    await client.query("BEGIN");
+
     const { username, password } = req.body;
 
     // Validate inputs
@@ -23,7 +28,7 @@ export const register = async (req, res, next) => {
     }
 
     // Check if user exists
-    const userExists = await pool.query(
+    const userExists = await client.query(
       "SELECT id FROM users WHERE username = $1",
       [username],
     );
@@ -39,12 +44,14 @@ export const register = async (req, res, next) => {
     const passwordHash = await hashPassword(password);
 
     // Create user
-    const result = await pool.query(
+    const result = await client.query(
       "INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username",
       [username, passwordHash],
     );
 
     const user = result.rows[0];
+    await ensureDefaultPaymentMethodsForUser(user.id, client);
+    await client.query("COMMIT");
     const token = generateToken(user.id, user.username);
 
     res.status(201).json({
@@ -57,11 +64,14 @@ export const register = async (req, res, next) => {
       token,
     });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Register error:", error);
     res.status(500).json({
       status: "ERROR",
       message: "Erro ao criar usuário",
     });
+  } finally {
+    client.release();
   }
 };
 
