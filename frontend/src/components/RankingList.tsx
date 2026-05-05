@@ -179,7 +179,7 @@ export function RankingList({
                 <p className="font-semibold text-sm truncate group-hover:text-foreground transition-colors">
                   {transaction.description}
                 </p>
-                <div className="flex items-center gap-2 mt-1">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <span className={cn(
                     "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium",
                     type === "income"
@@ -199,10 +199,10 @@ export function RankingList({
               </div>
 
               {/* Amount */}
-              <div className="flex flex-col items-end flex-shrink-0">
+              <div className="ml-auto flex min-w-0 flex-col items-end flex-shrink-0">
                 <span
                   className={cn(
-                    "font-bold text-base sm:text-lg whitespace-nowrap number-highlight",
+                    "text-sm font-bold number-highlight sm:text-lg",
                     type === "income" ? "text-income" : "text-expense",
                   )}
                 >

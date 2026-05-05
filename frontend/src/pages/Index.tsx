@@ -19,12 +19,13 @@ import { ptBR } from "date-fns/locale";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { KipLogo } from "@/components/ui/KipLogo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Index = () => {
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { addTransaction, deleteTransaction } = useTransactions();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
@@ -106,6 +107,7 @@ const Index = () => {
                   <span>Categorias</span>
                 </Button>
               </Link>
+              <ThemeToggle />
               <div className="w-px h-6 bg-border mx-2" />
               <TransactionForm onSubmit={addTransaction} />
               <Button
@@ -166,6 +168,10 @@ const Index = () => {
                       <span>Categorias</span>
                     </Button>
                   </Link>
+                  <ThemeToggle
+                    showLabel
+                    className="w-full justify-start gap-3 h-11 rounded-xl"
+                  />
                   <Button
                     variant="ghost"
                     onClick={() => {

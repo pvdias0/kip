@@ -12,9 +12,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff, CheckCircle2, Sparkles, Target, PiggyBank } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "@/components/ui/use-toast";
 import { motion } from "framer-motion";
 import { KipLogo } from "@/components/ui/KipLogo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const benefits = [
   { icon: Target, text: "Metas financeiras claras" },
@@ -30,33 +31,54 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!email || !password || !confirmPassword) {
-      setError("Por favor, preencha todos os campos");
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatorios",
+        description: "Preencha email, senha e confirmacao de senha.",
+      });
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("As senhas não conferem");
+      toast({
+        variant: "destructive",
+        title: "Senhas diferentes",
+        description: "A senha e a confirmacao precisam ser iguais.",
+      });
       return;
     }
 
     if (password.length < 6) {
-      setError("A senha deve ter pelo menos 6 caracteres");
+      toast({
+        variant: "destructive",
+        title: "Senha muito curta",
+        description: "A senha deve ter pelo menos 6 caracteres.",
+      });
       return;
     }
 
     try {
       await register(email, password);
+      toast({
+        title: "Conta criada com sucesso",
+        description: "Voce entrou automaticamente na sua conta.",
+      });
       navigate("/");
     } catch (err) {
-      setError("Erro ao criar conta. Este email pode já estar registrado.");
       console.error("Register error:", err);
+      toast({
+        variant: "destructive",
+        title: "Nao foi possivel criar a conta",
+        description:
+          err instanceof Error
+            ? err.message
+            : "Este email pode ja estar registrado.",
+      });
     }
   };
 
@@ -96,7 +118,8 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="relative min-h-screen bg-background flex">
+      <ThemeToggle className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6" />
       {/* Left Side - Branding (hidden on mobile) */}
       <motion.div
         className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
@@ -195,18 +218,6 @@ export default function Register() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                  >
-                    <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  </motion.div>
-                )}
-
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium">

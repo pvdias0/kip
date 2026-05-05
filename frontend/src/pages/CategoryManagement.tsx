@@ -21,7 +21,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Trash2, Plus, ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import {
+  Trash2,
+  Plus,
+  ArrowLeft,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default function CategoryManagement() {
   const navigate = useNavigate();
@@ -95,13 +103,14 @@ export default function CategoryManagement() {
               </p>
             </div>
           </div>
+          <ThemeToggle showLabel className="self-start sm:self-auto" />
         </div>
 
         {/* Messages */}
         {successMessage && (
-          <Alert className="mb-3 sm:mb-4 bg-green-50 border-green-200">
-            <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
-            <AlertDescription className="text-xs sm:text-sm text-green-800">
+          <Alert variant="success" className="mb-3 sm:mb-4">
+            <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+            <AlertDescription className="text-xs sm:text-sm">
               {successMessage}
             </AlertDescription>
           </Alert>

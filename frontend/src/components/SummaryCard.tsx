@@ -106,8 +106,8 @@ export function SummaryCard({
           "bg-gradient-to-tr from-transparent via-transparent to-white/10 dark:to-white/5"
         )} />
 
-        <CardContent className="p-6 relative">
-          <div className="flex items-start justify-between">
+        <CardContent className="relative p-4 sm:p-6">
+          <div className="flex items-start justify-between gap-3 sm:gap-4">
             <div className="space-y-3 flex-1">
               <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">
                 {title}
@@ -115,7 +115,7 @@ export function SummaryCard({
               <motion.p
                 variants={numberVariants}
                 className={cn(
-                  "text-3xl font-bold tracking-tight number-highlight",
+                  "break-words text-xl font-bold tracking-tight number-highlight sm:text-3xl",
                   variant === 'income' && "text-income",
                   variant === 'expense' && "text-expense",
                   variant === 'default' && (value >= 0 ? "text-foreground" : "text-expense")
@@ -141,13 +141,13 @@ export function SummaryCard({
             <motion.div
               variants={iconVariants}
               className={cn(
-                "rounded-2xl p-4 shadow-lg",
+                "rounded-2xl p-3 shadow-lg sm:p-4",
                 variant === 'income' && "bg-gradient-to-br from-income to-income/80 text-income-foreground income-glow",
                 variant === 'expense' && "bg-gradient-to-br from-expense to-expense/80 text-expense-foreground expense-glow",
                 variant === 'default' && "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground btn-primary-glow"
               )}
             >
-              <Icon className="h-6 w-6" />
+              <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
             </motion.div>
           </div>
         </CardContent>

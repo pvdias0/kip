@@ -30,14 +30,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { addMonths, subMonths, isSameMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
-import { KipLogo } from "@/components/ui/KipLogo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { transactions } = useTransactions();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const stats = useTransactionStats(transactions, selectedMonth);
@@ -153,6 +153,7 @@ const Dashboard = () => {
                   <span>Categorias</span>
                 </Button>
               </Link>
+              <ThemeToggle />
               <div className="w-px h-6 bg-border mx-2" />
               <Button
                 variant="ghost"
@@ -211,6 +212,10 @@ const Dashboard = () => {
                       <span>Categorias</span>
                     </Button>
                   </Link>
+                  <ThemeToggle
+                    showLabel
+                    className="w-full justify-start gap-3 h-11 rounded-xl"
+                  />
                   <Button
                     variant="ghost"
                     onClick={() => {

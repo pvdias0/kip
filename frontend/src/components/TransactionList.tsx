@@ -117,14 +117,14 @@ export function TransactionList({
       </div>
 
       <CardHeader className="px-4 sm:px-6 py-4 sm:py-5 relative">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="text-base sm:text-lg font-display flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 text-primary">
               <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
             </div>
             <span className="truncate">{title}</span>
           </CardTitle>
-          <span className="text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full font-medium">
+          <span className="w-fit text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full font-medium">
             {transactions.length} {transactions.length === 1 ? 'item' : 'itens'}
           </span>
         </div>
@@ -196,12 +196,12 @@ export function TransactionList({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 sm:flex-nowrap sm:justify-end">
                     {/* Amount */}
-                    <div className="flex flex-col items-end">
+                    <div className="flex min-w-0 flex-1 flex-col items-start sm:flex-none sm:items-end">
                       <span
                         className={cn(
-                          "font-bold text-base sm:text-lg whitespace-nowrap number-highlight",
+                          "text-sm font-bold number-highlight sm:text-lg",
                           transaction.type === "income"
                             ? "text-income"
                             : "text-expense",

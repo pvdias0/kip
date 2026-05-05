@@ -12,6 +12,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     /* Typography */
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
     --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
@@ -99,84 +100,94 @@
   }
 
   .dark {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
+    color-scheme: dark;
+    --background: 222 39% 5%;
+    --foreground: 210 33% 96%;
 
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 96%;
+    --card: 222 29% 8%;
+    --card-foreground: 210 33% 96%;
 
-    --popover: 222 47% 9%;
-    --popover-foreground: 210 40% 96%;
+    --popover: 222 29% 8%;
+    --popover-foreground: 210 33% 96%;
 
     /* Primary - Vibrant Teal */
-    --primary: 173 80% 45%;
-    --primary-foreground: 222 47% 6%;
+    --primary: 173 72% 48%;
+    --primary-foreground: 222 39% 6%;
 
-    --secondary: 222 35% 15%;
-    --secondary-foreground: 210 40% 90%;
+    --secondary: 222 22% 13%;
+    --secondary-foreground: 210 28% 92%;
 
-    --muted: 222 30% 14%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 222 20% 12%;
+    --muted-foreground: 214 16% 72%;
 
-    --accent: 173 40% 15%;
-    --accent-foreground: 173 80% 70%;
+    --accent: 173 34% 15%;
+    --accent-foreground: 173 73% 82%;
 
-    --destructive: 0 72% 50%;
+    --destructive: 0 78% 58%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 65% 45%;
+    --success: 152 63% 46%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 85% 50%;
-    --warning-foreground: 0 0% 100%;
+    --warning: 38 92% 58%;
+    --warning-foreground: 32 100% 8%;
 
-    --border: 222 30% 16%;
-    --input: 222 30% 16%;
-    --ring: 173 80% 45%;
+    --border: 222 17% 20%;
+    --input: 222 17% 18%;
+    --ring: 173 72% 48%;
 
-    --sidebar-background: 222 47% 7%;
-    --sidebar-foreground: 210 40% 90%;
-    --sidebar-primary: 173 80% 45%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 173 35% 12%;
-    --sidebar-accent-foreground: 173 80% 70%;
-    --sidebar-border: 222 30% 14%;
-    --sidebar-ring: 173 80% 45%;
+    --sidebar-background: 222 31% 7%;
+    --sidebar-foreground: 210 25% 92%;
+    --sidebar-primary: 173 72% 48%;
+    --sidebar-primary-foreground: 222 39% 6%;
+    --sidebar-accent: 173 26% 13%;
+    --sidebar-accent-foreground: 173 73% 82%;
+    --sidebar-border: 222 18% 16%;
+    --sidebar-ring: 173 72% 48%;
 
-    --income: 152 65% 45%;
+    --income: 152 63% 46%;
     --income-foreground: 0 0% 100%;
-    --income-muted: 152 40% 12%;
-    --income-glow: 152 65% 45%;
+    --income-muted: 152 32% 14%;
+    --income-glow: 152 63% 46%;
 
-    --expense: 0 72% 50%;
+    --expense: 0 78% 58%;
     --expense-foreground: 0 0% 100%;
-    --expense-muted: 0 35% 12%;
-    --expense-glow: 0 72% 50%;
+    --expense-muted: 0 28% 14%;
+    --expense-glow: 0 78% 58%;
 
-    --chart-1: 173 80% 45%;
-    --chart-2: 152 65% 45%;
-    --chart-3: 38 85% 50%;
-    --chart-4: 262 70% 60%;
-    --chart-5: 328 75% 60%;
-    --chart-6: 199 85% 55%;
+    --chart-1: 173 72% 48%;
+    --chart-2: 152 63% 46%;
+    --chart-3: 38 92% 58%;
+    --chart-4: 262 78% 68%;
+    --chart-5: 328 82% 68%;
+    --chart-6: 199 88% 62%;
 
-    --glass-bg: 222 47% 9% / 0.8;
-    --glass-border: 210 40% 96% / 0.1;
-    --glass-shadow: 0 0% 0% / 0.3;
+    --glass-bg: 222 28% 9% / 0.78;
+    --glass-border: 210 30% 96% / 0.08;
+    --glass-shadow: 0 0% 0% / 0.45;
 
-    --gradient-primary: linear-gradient(135deg, hsl(173 80% 35%) 0%, hsl(173 90% 50%) 100%);
-    --gradient-income: linear-gradient(135deg, hsl(152 65% 35%) 0%, hsl(152 75% 50%) 100%);
-    --gradient-expense: linear-gradient(135deg, hsl(0 72% 40%) 0%, hsl(0 82% 55%) 100%);
-    --gradient-glass: linear-gradient(135deg, rgba(30, 35, 45, 0.9) 0%, rgba(30, 35, 45, 0.6) 100%);
-    --gradient-mesh: radial-gradient(at 40% 20%, hsla(173, 80%, 45%, 0.15) 0px, transparent 50%),
-      radial-gradient(at 80% 0%, hsla(152, 65%, 45%, 0.15) 0px, transparent 50%),
-      radial-gradient(at 0% 50%, hsla(262, 70%, 60%, 0.08) 0px, transparent 50%);
+    --gradient-primary: linear-gradient(135deg, hsl(173 70% 34%) 0%, hsl(173 82% 50%) 100%);
+    --gradient-income: linear-gradient(135deg, hsl(152 58% 34%) 0%, hsl(152 72% 50%) 100%);
+    --gradient-expense: linear-gradient(135deg, hsl(0 66% 42%) 0%, hsl(0 84% 58%) 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(18, 24, 33, 0.92) 0%, rgba(18, 24, 33, 0.72) 100%);
+    --gradient-mesh: radial-gradient(at 40% 20%, hsla(173, 72%, 48%, 0.18) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(152, 63%, 46%, 0.14) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(262, 78%, 68%, 0.08) 0px, transparent 50%);
   }
 }
 
 @layer base {
   * {
     @apply border-border;
+    min-width: 0;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   html {
@@ -188,6 +199,7 @@
     font-family: var(--font-sans);
     background-image: var(--gradient-mesh);
     background-attachment: fixed;
+    overflow-x: hidden;
   }
 
   h1,
@@ -409,7 +421,7 @@
 
   /* Responsive Container */
   .container-app {
-    @apply container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+    @apply container mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
 
   /* Premium Header */

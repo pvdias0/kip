@@ -11,10 +11,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff, TrendingUp, Shield, Zap } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Mail, Lock, Loader2, Eye, EyeOff, TrendingUp, Shield, Zap } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
 import { motion } from "framer-motion";
 import { KipLogo } from "@/components/ui/KipLogo";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const features = [
   { icon: TrendingUp, text: "Acompanhe seus gastos" },
@@ -28,25 +29,34 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     if (!email || !password) {
-      setError("Por favor, preencha todos os campos");
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatorios",
+        description: "Preencha email e senha para continuar.",
+      });
       return;
     }
 
     try {
       await login(email, password);
+      toast({
+        title: "Login realizado com sucesso",
+        description: "Voce entrou na sua conta.",
+      });
       navigate("/");
     } catch (err) {
       console.error("Login page caught error:", err);
-      setError(
-        err instanceof Error ? err.message : "Ocorreu um erro durante o login",
-      );
+      toast({
+        variant: "destructive",
+        title: "Nao foi possivel entrar",
+        description:
+          err instanceof Error ? err.message : "Ocorreu um erro durante o login",
+      });
     }
   };
 
@@ -74,7 +84,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="relative min-h-screen bg-background flex">
+      <ThemeToggle className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6" />
       {/* Left Side - Branding (hidden on mobile) */}
       <motion.div
         className="hidden lg:flex lg:w-1/2 relative overflow-hidden"
@@ -173,18 +184,6 @@ export default function Login() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                  >
-                    <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  </motion.div>
-                )}
-
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium">

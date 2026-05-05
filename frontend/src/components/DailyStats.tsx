@@ -91,7 +91,7 @@ export function DailyStats({
           <p className="text-xs text-muted-foreground mb-1">Saldo</p>
           <p
             className={cn(
-              'text-lg font-bold',
+              'break-words text-base font-bold sm:text-lg',
               balance >= 0 ? 'text-income' : 'text-expense'
             )}
           >
@@ -108,7 +108,7 @@ export function DailyStats({
               {transactions.map((tx) => (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between p-2 bg-muted/40 rounded text-xs"
+                  className="flex flex-col gap-1 rounded bg-muted/40 p-2 text-xs sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-2 flex-1 min-w-0">
                     <div
@@ -123,7 +123,7 @@ export function DailyStats({
                   </div>
                   <span
                     className={cn(
-                      'font-semibold whitespace-nowrap ml-2',
+                      'font-semibold sm:ml-2',
                       tx.type === 'income' ? 'text-income' : 'text-expense'
                     )}
                   >

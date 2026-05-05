@@ -22,6 +22,7 @@ WORKDIR /app/backend
 COPY backend/package*.json ./
 RUN npm ci --omit=dev
 
+COPY backend/bootstrap.js ./
 COPY backend/src ./src
 COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 

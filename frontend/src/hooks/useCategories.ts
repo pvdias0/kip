@@ -36,12 +36,13 @@ export function useCategories() {
   }, [fetchCategories]);
 
   // Create category
-  const addCategory = useCallback(async (name: string) => {
+  const addCategory = useCallback(async (name: string): Promise<Category> => {
     try {
       setError(null);
       const response = await apiService.createCategory(name);
-      setCategories((prev) => [...prev, response.category as Category]);
-      return response.category;
+      const createdCategory = response.category as Category;
+      setCategories((prev) => [...prev, createdCategory]);
+      return createdCategory;
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Erro ao criar categoria";

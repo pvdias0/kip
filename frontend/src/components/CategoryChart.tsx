@@ -208,7 +208,7 @@ export function CategoryChart({
               <motion.div
                 key={item.category}
                 variants={itemVariants}
-                className="group flex items-center justify-between text-sm p-3 rounded-xl hover:bg-muted/50 transition-all duration-200 cursor-default"
+                className="group flex flex-col gap-2 rounded-xl p-3 text-sm transition-all duration-200 hover:bg-muted/50 cursor-default sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div
@@ -220,7 +220,7 @@ export function CategoryChart({
                   />
                   <span className="truncate font-medium">{item.category}</span>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                <div className="flex flex-wrap items-center gap-2 sm:ml-3 sm:flex-nowrap sm:justify-end">
                   {/* Progress bar */}
                   <div className="hidden sm:block w-20 h-2 bg-muted rounded-full overflow-hidden">
                     <motion.div
@@ -231,10 +231,10 @@ export function CategoryChart({
                       transition={{ duration: 0.8, delay: index * 0.1 }}
                     />
                   </div>
-                  <span className="text-muted-foreground text-xs w-12 text-right">
+                  <span className="w-12 text-left text-xs text-muted-foreground sm:text-right">
                     {percentage}%
                   </span>
-                  <span className="font-semibold whitespace-nowrap number-highlight">
+                  <span className="text-sm font-semibold number-highlight sm:text-base">
                     {formatCurrency(item.amount)}
                   </span>
                 </div>

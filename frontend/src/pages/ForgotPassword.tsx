@@ -13,6 +13,7 @@ import {
 import { Wallet, Mail, AlertCircle, Loader2, CheckCircle, ArrowLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buildApiUrl } from "@/lib/api-config";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -58,7 +59,8 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-4">
+    <div className="relative min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-4">
+      <ThemeToggle className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6" />
       <div className="w-full max-w-md space-y-6">
         {/* Logo Section */}
         <div className="flex flex-col items-center justify-center space-y-2">
@@ -87,11 +89,11 @@ export default function ForgotPassword() {
             {isSubmitted ? (
               <>
                 <div className="flex justify-center mb-4">
-                  <div className="rounded-full bg-green-100 p-4">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  <div className="rounded-full border border-success/20 bg-success/15 p-4">
+                    <CheckCircle className="h-8 w-8 text-success" />
                   </div>
                 </div>
-                <Alert>
+                <Alert variant="success">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     Se o email existe em nossa base, você receberá um link de recuperação em breve.

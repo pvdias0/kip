@@ -6,6 +6,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -18,7 +19,17 @@ import {
 } from "@/components/ui/dialog";
 import { TransactionType } from "@/types/finance";
 import { useCategories } from "@/hooks/useCategories";
-import { Plus, TrendingUp, TrendingDown, DollarSign, FileText, Calendar, Tag } from "lucide-react";
+import { toast } from "@/components/ui/use-toast";
+import {
+  Plus,
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  FileText,
+  Calendar,
+  Tag,
+  Loader2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -32,14 +43,39 @@ interface TransactionFormProps {
   }) => void;
 }
 
+const NO_CATEGORY_VALUE = "__no_category__";
+const CREATE_CATEGORY_VALUE = "__create_category__";
+
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<TransactionType>("income");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const { categories } = useCategories();
+  const { categories, addCategory } = useCategories();
+
+  const resetForm = () => {
+    setAmount("");
+    setDescription("");
+    setCategoryId("");
+    setNewCategoryName("");
+    setIsCreatingCategory(false);
+    setIsSavingCategory(false);
+    setDate(new Date().toISOString().split("T")[0]);
+  };
+
+  const handleDialogChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+
+    if (!nextOpen) {
+      setIsCreatingCategory(false);
+      setNewCategoryName("");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,12 +89,42 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       date,
     });
 
-    // Reset form
-    setAmount("");
-    setDescription("");
-    setCategoryId("");
-    setDate(new Date().toISOString().split("T")[0]);
+    resetForm();
     setOpen(false);
+  };
+
+  const handleCreateCategory = async () => {
+    const trimmedName = newCategoryName.trim();
+
+    if (!trimmedName) {
+      toast({
+        variant: "destructive",
+        title: "Nome obrigatorio",
+        description: "Informe um nome para criar a categoria.",
+      });
+      return;
+    }
+
+    try {
+      setIsSavingCategory(true);
+      const createdCategory = await addCategory(trimmedName);
+      setCategoryId(createdCategory.id.toString());
+      setNewCategoryName("");
+      setIsCreatingCategory(false);
+      toast({
+        title: "Categoria criada",
+        description: `"${createdCategory.name}" ja foi selecionada na transacao.`,
+      });
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Nao foi possivel criar a categoria",
+        description:
+          err instanceof Error ? err.message : "Tente novamente em instantes.",
+      });
+    } finally {
+      setIsSavingCategory(false);
+    }
   };
 
   const formatAmountPreview = () => {
@@ -71,15 +137,15 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogTrigger asChild>
         <Button
           size="lg"
-          className="gap-2 w-full xs:w-auto btn-primary-glow font-semibold"
+          className="w-full gap-2 font-semibold btn-primary-glow sm:w-auto"
         >
           <Plus className="h-5 w-5" />
-          <span className="hidden xs:inline">Nova Transação</span>
-          <span className="xs:hidden">Nova</span>
+          <span className="hidden sm:inline">Nova Transação</span>
+          <span className="sm:hidden">Nova</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[95vw] sm:max-w-lg mx-auto p-0 overflow-hidden">
@@ -215,22 +281,96 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                 Categoria
               </Label>
               <Select
-                value={categoryId || "placeholder"}
-                onValueChange={(val) =>
-                  setCategoryId(val === "placeholder" ? "" : val)
-                }
+                value={categoryId || NO_CATEGORY_VALUE}
+                onValueChange={(val) => {
+                  if (val === CREATE_CATEGORY_VALUE) {
+                    setIsCreatingCategory(true);
+                    return;
+                  }
+
+                  if (val === NO_CATEGORY_VALUE) {
+                    setCategoryId("");
+                    setIsCreatingCategory(false);
+                    return;
+                  }
+
+                  setCategoryId(val);
+                  setIsCreatingCategory(false);
+                }}
               >
                 <SelectTrigger className="h-12 border-2 focus:border-primary/50">
                   <SelectValue placeholder="Opcional" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover">
+                  <SelectItem value={NO_CATEGORY_VALUE}>
+                    Sem categoria
+                  </SelectItem>
+                  <SelectSeparator />
                   {categories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id.toString()}>
                       {cat.name}
                     </SelectItem>
                   ))}
+                  <SelectSeparator />
+                  <SelectItem value={CREATE_CATEGORY_VALUE}>
+                    <span className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Criar nova categoria
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
+
+              {isCreatingCategory && (
+                <div className="mt-3 space-y-3 rounded-xl border border-border/60 bg-muted/30 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-medium text-foreground">
+                      Nova categoria
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsCreatingCategory(false);
+                        setNewCategoryName("");
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                  <Input
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void handleCreateCategory();
+                      }
+                    }}
+                    placeholder="Ex: Academia"
+                    className="h-11 border-2 focus:border-primary/50"
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleCreateCategory}
+                    disabled={isSavingCategory || !newCategoryName.trim()}
+                    className="w-full sm:w-auto"
+                  >
+                    {isSavingCategory ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Criar categoria
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Date */}
@@ -253,6 +393,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
           {/* Submit Button */}
           <Button
             type="submit"
+            disabled={isSavingCategory}
             className={cn(
               "w-full h-12 text-base font-semibold transition-all duration-300",
               type === "income"

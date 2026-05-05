@@ -14,6 +14,7 @@ import {
 import { Link } from "react-router-dom";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Landing = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -136,10 +137,12 @@ const Landing = () => {
                   Entrar
                 </Button>
               </Link>
+              <ThemeToggle />
             </nav>
 
             {/* Mobile Menu Button */}
-            <div className="md:hidden">
+            <div className="md:hidden flex items-center gap-2">
+              <ThemeToggle />
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="p-2"
@@ -180,6 +183,7 @@ const Landing = () => {
                   Entrar
                 </Button>
               </Link>
+              <ThemeToggle showLabel className="w-full justify-center" />
             </motion.div>
           )}
         </div>

@@ -52,7 +52,7 @@ export function PeriodTabs({ onDeleteTransaction }: PeriodTabsProps) {
   const monthTransactions = getMonthTransactions(selectedMonth);
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4 overflow-x-hidden">
       <MonthNavigator
         currentDate={selectedMonth}
         onPreviousMonth={handlePreviousMonth}
@@ -61,7 +61,7 @@ export function PeriodTabs({ onDeleteTransaction }: PeriodTabsProps) {
       />
 
       <Tabs defaultValue="month" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2 mx-auto mb-6">
+        <TabsList className="mb-6 grid w-full grid-cols-2">
           <TabsTrigger value="week">Semana</TabsTrigger>
           <TabsTrigger value="month">Mês Completo</TabsTrigger>
         </TabsList>

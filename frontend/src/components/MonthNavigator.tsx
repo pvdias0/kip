@@ -21,7 +21,7 @@ export function MonthNavigator({
 
   return (
     <motion.div
-      className="flex items-center justify-center gap-4 py-4"
+      className="flex w-full items-center justify-center gap-2 py-4 sm:gap-4"
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
@@ -36,14 +36,14 @@ export function MonthNavigator({
       </Button>
 
       <motion.div
-        className="flex items-center gap-3 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 px-6 py-3 rounded-xl min-w-[240px] justify-center"
+        className="flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 px-3 py-3 sm:max-w-sm sm:flex-none sm:gap-3 sm:px-6"
         key={monthYear}
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.2 }}
       >
-        <Calendar className="h-5 w-5 text-primary" />
-        <span className="text-lg font-display font-semibold capitalize text-foreground">
+        <Calendar className="h-4 w-4 flex-shrink-0 text-primary sm:h-5 sm:w-5" />
+        <span className="truncate text-center text-sm font-display font-semibold capitalize text-foreground sm:text-lg">
           {monthYear}
         </span>
       </motion.div>

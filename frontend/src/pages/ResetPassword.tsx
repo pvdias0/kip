@@ -13,6 +13,7 @@ import {
 import { Wallet, Lock, AlertCircle, Loader2, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buildApiUrl } from "@/lib/api-config";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -110,7 +111,8 @@ export default function ResetPassword() {
 
   if (isValidating) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-4">
+      <div className="relative min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-4">
+        <ThemeToggle className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6" />
         <Card className="border-0 shadow-lg">
           <CardContent className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -121,7 +123,8 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-4">
+    <div className="relative min-h-screen bg-gradient-to-br from-background via-muted to-background flex items-center justify-center p-4">
+      <ThemeToggle className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6" />
       <div className="w-full max-w-md space-y-6">
         {/* Logo Section */}
         <div className="flex flex-col items-center justify-center space-y-2">
@@ -164,11 +167,11 @@ export default function ResetPassword() {
             ) : isSuccess ? (
               <>
                 <div className="flex justify-center mb-4">
-                  <div className="rounded-full bg-green-100 p-4">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  <div className="rounded-full border border-success/20 bg-success/15 p-4">
+                    <CheckCircle className="h-8 w-8 text-success" />
                   </div>
                 </div>
-                <Alert>
+                <Alert variant="success">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
                     Sua senha foi redefinida com sucesso! Você pode fazer login agora.
