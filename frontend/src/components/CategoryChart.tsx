@@ -17,22 +17,74 @@ interface CategoryChartProps {
   emptyMessage?: string;
 }
 
-// Premium color palettes
 const INCOME_COLORS = [
-  "hsl(152, 76%, 40%)",
-  "hsl(158, 70%, 45%)",
-  "hsl(162, 65%, 50%)",
-  "hsl(168, 60%, 45%)",
-  "hsl(172, 55%, 40%)",
+  "hsl(149, 68%, 42%)",
+  "hsl(195, 84%, 44%)",
+  "hsl(41, 92%, 52%)",
+  "hsl(271, 70%, 56%)",
+  "hsl(13, 85%, 57%)",
+  "hsl(175, 72%, 38%)",
+  "hsl(222, 78%, 58%)",
+  "hsl(329, 76%, 56%)",
 ];
 
 const EXPENSE_COLORS = [
-  "hsl(0, 84%, 60%)",
-  "hsl(10, 78%, 55%)",
-  "hsl(20, 72%, 50%)",
-  "hsl(350, 80%, 55%)",
-  "hsl(340, 75%, 50%)",
+  "hsl(2, 82%, 58%)",
+  "hsl(28, 88%, 54%)",
+  "hsl(213, 81%, 54%)",
+  "hsl(282, 68%, 57%)",
+  "hsl(156, 68%, 42%)",
+  "hsl(48, 92%, 50%)",
+  "hsl(336, 78%, 55%)",
+  "hsl(188, 72%, 40%)",
 ];
+
+interface ChartItem {
+  category: string | number;
+  amount: number;
+  percentage: number;
+  fill: string;
+}
+
+interface CategoryTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    payload?: ChartItem;
+  }>;
+}
+
+function CategoryTooltip({ active, payload }: CategoryTooltipProps) {
+  const item = payload?.[0]?.payload;
+
+  if (!active || !item) {
+    return null;
+  }
+
+  return (
+    <div className="min-w-[11rem] rounded-xl border border-border/60 bg-background/95 px-3 py-2 shadow-xl backdrop-blur">
+      <div className="flex items-start gap-2">
+        <span
+          className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full"
+          style={{ backgroundColor: item.fill }}
+        />
+        <div className="min-w-0">
+          <p className="break-words text-sm font-semibold text-foreground">
+            {item.category}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {item.percentage.toFixed(1)}% do total
+          </p>
+          <p className="mt-1 text-sm font-semibold text-foreground">
+            {new Intl.NumberFormat("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            }).format(item.amount)}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function CategoryChart({
   data,
@@ -51,6 +103,15 @@ export function CategoryChart({
   };
 
   const total = data.reduce((sum, item) => sum + item.amount, 0);
+  const chartData: ChartItem[] = data.map((item, index) => ({
+    ...item,
+    percentage: total > 0 ? (item.amount / total) * 100 : 0,
+    fill: colors[index % colors.length],
+  }));
+  const hasFullCircleSlice =
+    chartData.length === 1 ||
+    chartData.some((item) => item.percentage >= 99.95);
+  const piePaddingAngle = hasFullCircleSlice ? 0 : 3;
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -141,40 +202,36 @@ export function CategoryChart({
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
+                data={chartData}
                 cx="50%"
                 cy="50%"
                 innerRadius={55}
                 outerRadius={85}
-                paddingAngle={3}
+                startAngle={90}
+                endAngle={-270}
+                paddingAngle={piePaddingAngle}
                 dataKey="amount"
                 nameKey="category"
+                stroke="transparent"
+                strokeWidth={0}
+                cornerRadius={hasFullCircleSlice ? 0 : 4}
                 animationBegin={0}
                 animationDuration={800}
               >
-                {data.map((_, index) => (
+                {chartData.map((item, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={colors[index % colors.length]}
+                    fill={item.fill}
                     className="transition-all duration-300 hover:opacity-80"
                     style={{ filter: "drop-shadow(0 4px 6px rgba(0,0,0,0.1))" }}
                   />
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number) => formatCurrency(value)}
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "none",
-                  borderRadius: "12px",
-                  boxShadow: "0 10px 40px -10px rgba(0,0,0,0.2)",
-                  padding: "12px 16px",
-                  fontSize: "13px",
-                }}
-                labelStyle={{
-                  fontWeight: 600,
-                  marginBottom: "4px",
-                }}
+                cursor={false}
+                isAnimationActive={false}
+                wrapperStyle={{ outline: "none", pointerEvents: "none", zIndex: 20 }}
+                content={<CategoryTooltip />}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -202,8 +259,8 @@ export function CategoryChart({
           initial="hidden"
           animate="visible"
         >
-          {data.map((item, index) => {
-            const percentage = ((item.amount / total) * 100).toFixed(1);
+          {chartData.map((item, index) => {
+            const percentage = item.percentage.toFixed(1);
             return (
               <motion.div
                 key={item.category}
@@ -214,8 +271,8 @@ export function CategoryChart({
                   <div
                     className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-offset-2 ring-offset-card transition-transform group-hover:scale-110"
                     style={{
-                      backgroundColor: colors[index % colors.length],
-                      boxShadow: `0 0 0 2px ${colors[index % colors.length]}`,
+                      backgroundColor: item.fill,
+                      boxShadow: `0 0 0 2px ${item.fill}`,
                     }}
                   />
                   <span className="truncate font-medium">{item.category}</span>
@@ -225,7 +282,7 @@ export function CategoryChart({
                   <div className="hidden sm:block w-20 h-2 bg-muted rounded-full overflow-hidden">
                     <motion.div
                       className="h-full rounded-full"
-                      style={{ backgroundColor: colors[index % colors.length] }}
+                      style={{ backgroundColor: item.fill }}
                       initial={{ width: 0 }}
                       animate={{ width: `${percentage}%` }}
                       transition={{ duration: 0.8, delay: index * 0.1 }}
