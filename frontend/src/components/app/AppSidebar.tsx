@@ -5,6 +5,7 @@ import {
   CreditCard,
   Landmark,
   LogOut,
+  MessageCircle,
   Settings2,
   UserRound,
   Wallet,
@@ -62,6 +63,12 @@ const navigationItems = [
     href: "/payment-accounts",
     icon: Landmark,
     isActive: (pathname: string) => pathname.startsWith("/payment-accounts"),
+  },
+  {
+    label: "WhatsApp",
+    href: "/whatsapp",
+    icon: MessageCircle,
+    isActive: (pathname: string) => pathname.startsWith("/whatsapp"),
   },
   {
     label: "Perfil",

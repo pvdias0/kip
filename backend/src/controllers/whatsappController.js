@@ -1,10 +1,13 @@
 import pool from "../config/database.js";
+import crypto from "node:crypto";
 import {
   getWhatsAppConfig,
   isWhatsAppConfigured,
 } from "../config/whatsapp.js";
 import {
+  claimIncomingMessageForAssistant,
   extractInboundWhatsAppMessages,
+  markIncomingMessageAssistantStatus,
   normalizeWhatsAppPhoneNumber,
   processWhatsAppWebhookPayload,
   syncWhatsAppChannelConfig,
@@ -48,6 +51,45 @@ async function getWhatsAppProfileRecord(userId, client = pool) {
   return result.rows[0] || null;
 }
 
+function getWebhookSignature(headerValue) {
+  const rawSignature = String(headerValue || "").trim();
+
+  if (!rawSignature.startsWith("sha256=")) {
+    return null;
+  }
+
+  const signatureHex = rawSignature.slice("sha256=".length);
+
+  if (!/^[a-fA-F0-9]{64}$/.test(signatureHex)) {
+    return null;
+  }
+
+  return signatureHex.toLowerCase();
+}
+
+function isValidWebhookSignature(req, appSecret) {
+  const providedSignature = getWebhookSignature(
+    req.get("x-hub-signature-256"),
+  );
+
+  if (!providedSignature || !appSecret || !req.rawBody) {
+    return false;
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", appSecret)
+    .update(req.rawBody, "utf8")
+    .digest("hex");
+  const providedBuffer = Buffer.from(providedSignature, "hex");
+  const expectedBuffer = Buffer.from(expectedSignature, "hex");
+
+  if (providedBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
 export const verifyWhatsAppWebhook = async (req, res) => {
   const mode = req.query["hub.mode"];
   const verifyToken = req.query["hub.verify_token"];
@@ -72,15 +114,73 @@ export const verifyWhatsAppWebhook = async (req, res) => {
 };
 
 export const receiveWhatsAppWebhook = async (req, res) => {
+  const config = getWhatsAppConfig();
+
+  if (!config.appSecret) {
+    return res.status(503).json({
+      status: "ERROR",
+      message: "Webhook do WhatsApp indisponivel por configuracao incompleta",
+    });
+  }
+
+  if (!isValidWebhookSignature(req, config.appSecret)) {
+    return res.status(401).json({
+      status: "ERROR",
+      message: "Assinatura do webhook invalida",
+    });
+  }
+
   try {
     const summary = await processWhatsAppWebhookPayload(req.body, pool);
     const inboundMessages = extractInboundWhatsAppMessages(req.body);
+    const assistantQueue = [];
 
-    if (inboundMessages.length > 0) {
+    for (const message of inboundMessages) {
+      const messageId = message?.id || null;
+
+      if (!messageId) {
+        assistantQueue.push(message);
+        continue;
+      }
+
+      const claimed = await claimIncomingMessageForAssistant(messageId, pool);
+
+      if (claimed) {
+        assistantQueue.push(message);
+      }
+    }
+
+    if (assistantQueue.length > 0) {
       queueMicrotask(() => {
         (async () => {
-          for (const message of inboundMessages) {
-            await handleIncomingWhatsAppMessage(message);
+          for (const message of assistantQueue) {
+            const messageId = message?.id || null;
+
+            try {
+              const handled = await handleIncomingWhatsAppMessage(message);
+
+              if (messageId) {
+                await markIncomingMessageAssistantStatus(
+                  messageId,
+                  handled ? "processed" : "failed",
+                  handled
+                    ? null
+                    : "Falha ao processar mensagem no assistente",
+                  pool,
+                );
+              }
+            } catch (error) {
+              if (messageId) {
+                await markIncomingMessageAssistantStatus(
+                  messageId,
+                  "failed",
+                  "Falha nao tratada no processamento do assistente",
+                  pool,
+                );
+              }
+
+              console.error("WhatsApp assistant message processing error:", error);
+            }
           }
         })().catch((error) => {
           console.error("WhatsApp assistant background processing error:", error);
@@ -91,6 +191,7 @@ export const receiveWhatsAppWebhook = async (req, res) => {
     return res.status(200).json({
       status: "OK",
       ...summary,
+      queuedAssistantMessages: assistantQueue.length,
     });
   } catch (error) {
     console.error("WhatsApp webhook receive error:", error);
@@ -236,7 +337,8 @@ export const upsertUserWhatsAppProfile = async (req, res) => {
               ELSE NULL
             END,
             verification_status = CASE
-              WHEN COALESCE($2, phone_number_e164) IS NOT NULL THEN 'registered'
+              WHEN COALESCE($2, phone_number_e164) IS NULL THEN 'pending'
+              WHEN COALESCE($2, phone_number_e164) IS DISTINCT FROM phone_number_e164 THEN 'pending'
               ELSE verification_status
             END,
             updated_at = NOW()
@@ -269,7 +371,7 @@ export const upsertUserWhatsAppProfile = async (req, res) => {
             CASE WHEN $4 = TRUE THEN NOW() ELSE NULL END,
             $5,
             CASE WHEN $4 = FALSE THEN NOW() ELSE NULL END,
-            'registered',
+            'pending',
             NOW()
           )
         `,

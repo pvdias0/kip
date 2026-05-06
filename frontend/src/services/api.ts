@@ -99,6 +99,25 @@ class ApiService {
     });
   }
 
+  async getWhatsAppProfile() {
+    return this.request("/whatsapp/profile");
+  }
+
+  async updateWhatsAppProfile(data: {
+    phone_number?: string;
+    opted_in: boolean;
+    opt_in_source?: string;
+    receive_support_messages?: boolean;
+    receive_transactional_messages?: boolean;
+    receive_weekly_summary?: boolean;
+    receive_budget_alerts?: boolean;
+  }) {
+    return this.request("/whatsapp/profile", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  }
+
   async acceptLegalDocuments(data: {
     termsAccepted: boolean;
     privacyAccepted: boolean;

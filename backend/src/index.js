@@ -68,7 +68,14 @@ app.use(
   }),
 );
 
-app.use(express.json({ limit: "10kb" }));
+app.use(
+  express.json({
+    limit: "10kb",
+    verify: (req, res, buffer) => {
+      req.rawBody = buffer.toString("utf8");
+    },
+  }),
+);
 app.use("/api", apiLimiter);
 
 app.get("/api/health", (req, res) => {

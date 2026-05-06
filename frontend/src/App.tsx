@@ -13,6 +13,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Profile from "./pages/Profile";
+import WhatsAppSettings from "./pages/WhatsAppSettings";
 import CategoryManagement from "./pages/CategoryManagement";
 import PaymentMethodManagement from "./pages/PaymentMethodManagement";
 import PaymentAccountManagement from "./pages/PaymentAccountManagement";
@@ -163,6 +164,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/whatsapp"
+        element={
+          <ProtectedRoute>
+            <WhatsAppSettings />
           </ProtectedRoute>
         }
       />

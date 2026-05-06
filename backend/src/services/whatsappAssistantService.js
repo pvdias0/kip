@@ -31,6 +31,12 @@ import {
 const BRAZIL_TIME_ZONE = "America/Fortaleza";
 const CANCEL_PATTERN = /^(cancelar|cancela|cancel|parar|sair)$/i;
 const HELP_PATTERN = /^(\/?ajuda|\/?help)$/i;
+const TRANSACTIONAL_INTENTS = new Set([
+  "get_entries",
+  "create_entry",
+  "create_payment_method",
+  "create_payment_account",
+]);
 
 function getLocalDateString(date = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -657,6 +663,21 @@ async function executeIntent({ intent, slots, userContext, contact, client }) {
   };
 }
 
+function getContactPreferences(contact) {
+  return {
+    receiveSupportMessages: contact?.receive_support_messages ?? true,
+    receiveTransactionalMessages: contact?.receive_transactional_messages ?? true,
+  };
+}
+
+function buildSupportPreferenceMessage() {
+  return "As mensagens de suporte do WhatsApp estao desativadas no seu perfil do KIP.";
+}
+
+function buildTransactionalPreferenceMessage() {
+  return "As mensagens transacionais do WhatsApp estao desativadas no seu perfil do KIP. Ative essa opcao para continuar.";
+}
+
 async function replyAndPersistSession({
   contact,
   messageId,
@@ -671,7 +692,9 @@ async function replyAndPersistSession({
   client,
 }) {
   if (!isWithinCustomerCareWindow(session, new Date())) {
-    return;
+    throw new Error(
+      "A janela de atendimento do WhatsApp expirou antes da resposta ser enviada",
+    );
   }
 
   const outbound = await sendWhatsAppTextMessage({
@@ -720,13 +743,13 @@ export async function handleIncomingWhatsAppMessage(message) {
   const config = getWhatsAppConfig();
 
   if (!config.assistantEnabled) {
-    return;
+    return true;
   }
 
   const normalizedPhoneNumber = normalizeWhatsAppPhoneNumber(message?.from);
 
   if (!normalizedPhoneNumber) {
-    return;
+    return true;
   }
 
   const client = await pool.connect();
@@ -741,9 +764,10 @@ export async function handleIncomingWhatsAppMessage(message) {
         relatedMessageId: message?.id || null,
         client,
       });
-      return;
+      return true;
     }
 
+    const preferences = getContactPreferences(contact);
     const inboundAt = getDateFromWhatsAppTimestamp(message?.timestamp) || new Date();
     const messageText = getTextFromWhatsAppMessage(message).trim();
 
@@ -779,7 +803,7 @@ export async function handleIncomingWhatsAppMessage(message) {
         replyText: "Por enquanto eu consigo processar apenas mensagens de texto. Envie sua solicitacao por escrito.",
         client,
       });
-      return;
+      return true;
     }
 
     if (!contact.opted_in) {
@@ -797,10 +821,14 @@ export async function handleIncomingWhatsAppMessage(message) {
         closeSessionAfterReply: true,
         client,
       });
-      return;
+      return true;
     }
 
     if (CANCEL_PATTERN.test(messageText)) {
+      const replyText = preferences.receiveSupportMessages
+        ? "Fluxo cancelado. Quando quiser, envie uma nova mensagem."
+        : buildSupportPreferenceMessage();
+
       await replyAndPersistSession({
         contact,
         messageId: message?.id || null,
@@ -810,14 +838,18 @@ export async function handleIncomingWhatsAppMessage(message) {
         currentStep: null,
         pendingQuestion: null,
         slotState: {},
-        replyText: "Fluxo cancelado. Quando quiser, envie uma nova mensagem.",
+        replyText,
         closeSessionAfterReply: true,
         client,
       });
-      return;
+      return true;
     }
 
     if (HELP_PATTERN.test(messageText)) {
+      const replyText = preferences.receiveSupportMessages
+        ? buildHelpMessage()
+        : buildSupportPreferenceMessage();
+
       await replyAndPersistSession({
         contact,
         messageId: message?.id || null,
@@ -827,11 +859,11 @@ export async function handleIncomingWhatsAppMessage(message) {
         currentStep: null,
         pendingQuestion: null,
         slotState: {},
-        replyText: buildHelpMessage(),
+        replyText,
         closeSessionAfterReply: true,
         client,
       });
-      return;
+      return true;
     }
 
     const userContext = await buildUserContext(contact.user_id, client);
@@ -890,6 +922,10 @@ export async function handleIncomingWhatsAppMessage(message) {
     );
 
     if (normalizedIntent.intent === "help" || normalizedIntent.intent === "unknown") {
+      const replyText = preferences.receiveSupportMessages
+        ? buildHelpMessage()
+        : buildSupportPreferenceMessage();
+
       await replyAndPersistSession({
         contact,
         messageId: message?.id || null,
@@ -899,11 +935,31 @@ export async function handleIncomingWhatsAppMessage(message) {
         currentStep: null,
         pendingQuestion: null,
         slotState: {},
-        replyText: buildHelpMessage(),
+        replyText,
         closeSessionAfterReply: true,
         client,
       });
-      return;
+      return true;
+    }
+
+    if (
+      TRANSACTIONAL_INTENTS.has(normalizedIntent.intent) &&
+      !preferences.receiveTransactionalMessages
+    ) {
+      await replyAndPersistSession({
+        contact,
+        messageId: message?.id || null,
+        inboundAt,
+        session,
+        currentIntent: null,
+        currentStep: null,
+        pendingQuestion: null,
+        slotState: {},
+        replyText: buildTransactionalPreferenceMessage(),
+        closeSessionAfterReply: true,
+        client,
+      });
+      return true;
     }
 
     if (validation.validationMessage) {
@@ -919,7 +975,7 @@ export async function handleIncomingWhatsAppMessage(message) {
         replyText: validation.validationMessage,
         client,
       });
-      return;
+      return true;
     }
 
     if (validation.missingFields.length > 0) {
@@ -938,7 +994,7 @@ export async function handleIncomingWhatsAppMessage(message) {
         replyText: question,
         client,
       });
-      return;
+      return true;
     }
 
     const execution = await executeIntent({
@@ -962,6 +1018,7 @@ export async function handleIncomingWhatsAppMessage(message) {
       closeSessionAfterReply: execution.closeSession,
       client,
     });
+    return true;
   } catch (error) {
     console.error("WhatsApp assistant error:", error);
 
@@ -975,6 +1032,7 @@ export async function handleIncomingWhatsAppMessage(message) {
     } catch (replyError) {
       console.error("WhatsApp assistant fallback reply error:", replyError);
     }
+    return false;
   } finally {
     client.release();
   }

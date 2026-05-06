@@ -27,6 +27,10 @@ function parseJsonResponse(text) {
   }
 }
 
+function addHours(date, hours) {
+  return new Date(date.getTime() + hours * 60 * 60 * 1000);
+}
+
 export function normalizeWhatsAppPhoneNumber(input) {
   const digits = String(input ?? "").replace(/\D/g, "");
 
@@ -197,6 +201,144 @@ export function getTextFromWhatsAppMessage(message) {
   return "";
 }
 
+async function findLastInboundMessageAt(
+  { userId, contactId, phoneNumber, relatedMessageId },
+  client = pool,
+) {
+  if (relatedMessageId) {
+    const relatedMessage = await client.query(
+      `
+        SELECT COALESCE(sent_at, created_at) AS inbound_at
+        FROM whatsapp_messages
+        WHERE meta_message_id = $1
+          AND direction = 'incoming'
+        LIMIT 1
+      `,
+      [relatedMessageId],
+    );
+
+    const inboundAt = relatedMessage.rows[0]?.inbound_at;
+
+    if (inboundAt) {
+      return new Date(inboundAt);
+    }
+  }
+
+  if (contactId) {
+    const contactMessage = await client.query(
+      `
+        SELECT COALESCE(sent_at, created_at) AS inbound_at
+        FROM whatsapp_messages
+        WHERE contact_id = $1
+          AND direction = 'incoming'
+        ORDER BY COALESCE(sent_at, created_at) DESC
+        LIMIT 1
+      `,
+      [contactId],
+    );
+
+    const inboundAt = contactMessage.rows[0]?.inbound_at;
+
+    if (inboundAt) {
+      return new Date(inboundAt);
+    }
+  }
+
+  if (userId) {
+    const userMessage = await client.query(
+      `
+        SELECT COALESCE(sent_at, created_at) AS inbound_at
+        FROM whatsapp_messages
+        WHERE user_id = $1
+          AND direction = 'incoming'
+        ORDER BY COALESCE(sent_at, created_at) DESC
+        LIMIT 1
+      `,
+      [userId],
+    );
+
+    const inboundAt = userMessage.rows[0]?.inbound_at;
+
+    if (inboundAt) {
+      return new Date(inboundAt);
+    }
+  }
+
+  if (phoneNumber) {
+    const phoneMessage = await client.query(
+      `
+        SELECT COALESCE(sent_at, created_at) AS inbound_at
+        FROM whatsapp_messages
+        WHERE phone_number = $1
+          AND direction = 'incoming'
+        ORDER BY COALESCE(sent_at, created_at) DESC
+        LIMIT 1
+      `,
+      [phoneNumber],
+    );
+
+    const inboundAt = phoneMessage.rows[0]?.inbound_at;
+
+    if (inboundAt) {
+      return new Date(inboundAt);
+    }
+  }
+
+  return null;
+}
+
+export async function claimIncomingMessageForAssistant(
+  metaMessageId,
+  client = pool,
+) {
+  if (!metaMessageId) {
+    return false;
+  }
+
+  const result = await client.query(
+    `
+      UPDATE whatsapp_messages
+      SET
+        status = 'processing',
+        updated_at = NOW()
+      WHERE meta_message_id = $1
+        AND direction = 'incoming'
+        AND status = 'received'
+      RETURNING id
+    `,
+    [metaMessageId],
+  );
+
+  return Boolean(result.rows[0]?.id);
+}
+
+export async function markIncomingMessageAssistantStatus(
+  metaMessageId,
+  status,
+  errorMessage = null,
+  client = pool,
+) {
+  if (!metaMessageId) {
+    return;
+  }
+
+  await client.query(
+    `
+      UPDATE whatsapp_messages
+      SET
+        status = $2,
+        error_message = CASE
+          WHEN $2 = 'failed' THEN $3
+          ELSE NULL
+        END,
+        updated_at = NOW()
+      WHERE meta_message_id = $1
+        AND direction = 'incoming'
+    `,
+    [metaMessageId, status, errorMessage],
+  );
+}
+
 export async function sendWhatsAppTextMessage(
   {
     to,
@@ -204,6 +346,7 @@ export async function sendWhatsAppTextMessage(
     userId = null,
     contactId = null,
     relatedMessageId = null,
+    enforceReplyWindow = true,
     client = pool,
   },
 ) {
@@ -217,6 +360,32 @@ export async function sendWhatsAppTextMessage(
 
   if (!normalizedPhoneNumber) {
     throw new Error("Numero de WhatsApp invalido para envio");
+  }
+
+  if (enforceReplyWindow) {
+    const lastInboundAt = await findLastInboundMessageAt(
+      {
+        userId,
+        contactId,
+        phoneNumber: normalizedPhoneNumber,
+        relatedMessageId,
+      },
+      client,
+    );
+
+    if (!lastInboundAt) {
+      throw new Error(
+        "Nao foi possivel confirmar a ultima mensagem do usuario para responder dentro da janela de 24 horas",
+      );
+    }
+
+    const windowExpiresAt = addHours(lastInboundAt, config.replyWindowHours);
+
+    if (windowExpiresAt.getTime() < Date.now()) {
+      throw new Error(
+        "Nao e permitido enviar mensagens fora da janela de atendimento de 24 horas",
+      );
+    }
   }
 
   const requestPayload = {
@@ -336,7 +505,12 @@ async function saveIncomingMessage(message, changeValue, client = pool) {
         user_id = COALESCE(whatsapp_messages.user_id, EXCLUDED.user_id),
         contact_id = COALESCE(whatsapp_messages.contact_id, EXCLUDED.contact_id),
         type = EXCLUDED.type,
-        status = EXCLUDED.status,
+        status = CASE
+          WHEN whatsapp_messages.direction = 'incoming'
+            AND whatsapp_messages.status IN ('processing', 'processed', 'failed')
+          THEN whatsapp_messages.status
+          ELSE EXCLUDED.status
+        END,
         phone_number = EXCLUDED.phone_number,
         related_message_id = EXCLUDED.related_message_id,
         template_name = EXCLUDED.template_name,
@@ -358,6 +532,20 @@ async function saveIncomingMessage(message, changeValue, client = pool) {
       toDateFromUnixTimestamp(message.timestamp),
     ],
   );
+
+  if (linkedContact?.id) {
+    await client.query(
+      `
+        UPDATE user_whatsapp_contacts
+        SET
+          verification_status = 'verified',
+          updated_at = NOW()
+        WHERE id = $1
+          AND verification_status <> 'verified'
+      `,
+      [linkedContact.id],
+    );
+  }
 }
 
 async function saveMessageStatus(status, changeValue, client = pool) {
