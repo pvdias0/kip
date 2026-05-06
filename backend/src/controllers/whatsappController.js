@@ -4,10 +4,12 @@ import {
   isWhatsAppConfigured,
 } from "../config/whatsapp.js";
 import {
+  extractInboundWhatsAppMessages,
   normalizeWhatsAppPhoneNumber,
   processWhatsAppWebhookPayload,
   syncWhatsAppChannelConfig,
 } from "../utils/whatsapp.js";
+import { handleIncomingWhatsAppMessage } from "../services/whatsappAssistantService.js";
 
 async function ensureAdminUser(userId) {
   const result = await pool.query(
@@ -72,6 +74,19 @@ export const verifyWhatsAppWebhook = async (req, res) => {
 export const receiveWhatsAppWebhook = async (req, res) => {
   try {
     const summary = await processWhatsAppWebhookPayload(req.body, pool);
+    const inboundMessages = extractInboundWhatsAppMessages(req.body);
+
+    if (inboundMessages.length > 0) {
+      queueMicrotask(() => {
+        (async () => {
+          for (const message of inboundMessages) {
+            await handleIncomingWhatsAppMessage(message);
+          }
+        })().catch((error) => {
+          console.error("WhatsApp assistant background processing error:", error);
+        });
+      });
+    }
 
     return res.status(200).json({
       status: "OK",
@@ -122,6 +137,9 @@ export const getWhatsAppChannelStatus = async (req, res) => {
         business_phone_number: config.businessPhoneNumber || null,
         app_id: config.appId || null,
         webhook_callback_url: config.webhookCallbackUrl || null,
+        assistant_enabled: config.assistantEnabled,
+        reply_window_hours: config.replyWindowHours,
+        assistant_max_entries: config.assistantMaxEntries,
       },
       stats: counts.rows[0],
     });

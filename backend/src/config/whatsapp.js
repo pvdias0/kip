@@ -5,6 +5,15 @@ function trimTrailingSlash(value) {
 }
 
 export function getWhatsAppConfig() {
+  const replyWindowHours = Number.parseInt(
+    process.env.WHATSAPP_REPLY_WINDOW_HOURS || "24",
+    10,
+  );
+  const assistantMaxEntries = Number.parseInt(
+    process.env.WHATSAPP_ASSISTANT_MAX_ENTRIES || "5",
+    10,
+  );
+
   return {
     apiBaseUrl: trimTrailingSlash(
       process.env.WHATSAPP_API_BASE_URL || DEFAULT_WHATSAPP_API_BASE_URL,
@@ -18,6 +27,17 @@ export function getWhatsAppConfig() {
     webhookVerifyToken: process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim() || "",
     businessPin: process.env.WHATSAPP_BUSINESS_PIN?.trim() || "",
     webhookCallbackUrl: process.env.WHATSAPP_WEBHOOK_CALLBACK_URL?.trim() || "",
+    assistantEnabled:
+      (process.env.WHATSAPP_ASSISTANT_ENABLED || "true").trim().toLowerCase() !==
+      "false",
+    replyWindowHours:
+      Number.isInteger(replyWindowHours) && replyWindowHours > 0
+        ? replyWindowHours
+        : 24,
+    assistantMaxEntries:
+      Number.isInteger(assistantMaxEntries) && assistantMaxEntries > 0
+        ? assistantMaxEntries
+        : 5,
   };
 }
 
