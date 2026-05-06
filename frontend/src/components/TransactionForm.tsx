@@ -45,12 +45,16 @@ import {
   Landmark,
   Tag,
   Loader2,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { Transaction } from "@/types/finance";
 
 interface TransactionFormProps {
-  onSubmit: (transaction: TransactionInput) => Promise<void> | void;
+  onSubmit: (transaction: TransactionInput, transactionId?: number) => Promise<void> | void;
+  transaction?: Transaction;
+  trigger?: React.ReactNode;
 }
 
 const NO_CATEGORY_VALUE = "__no_category__";
@@ -64,9 +68,15 @@ function getLocalDateInputValue() {
   return format(new Date(), "yyyy-MM-dd");
 }
 
-export function TransactionForm({ onSubmit }: TransactionFormProps) {
+export function TransactionForm({
+  onSubmit,
+  transaction,
+  trigger,
+}: TransactionFormProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const isEditing = Boolean(transaction);
+  const draftScope = isEditing ? `edit:${transaction?.id}` : "create";
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<TransactionType>("income");
   const [amount, setAmount] = useState("");
@@ -83,15 +93,39 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const { categories, addCategory } = useCategories();
   const { paymentMethods } = usePaymentMethods();
 
+  const populateForm = (nextTransaction?: Transaction) => {
+    if (!nextTransaction) {
+      setType("income");
+      setAmount("");
+      setDescription("");
+      setCategoryId("");
+      setPaymentMethodId("");
+      setPaymentAccountId("");
+      setDate(getLocalDateInputValue());
+      return;
+    }
+
+    setType(nextTransaction.type);
+    setAmount(String(nextTransaction.amount));
+    setDescription(nextTransaction.description);
+    setCategoryId(nextTransaction.category_id?.toString() || "");
+    setPaymentMethodId(nextTransaction.payment_method_id?.toString() || "");
+    setPaymentAccountId(nextTransaction.payment_account_id?.toString() || "");
+    setDate(nextTransaction.date.slice(0, 10));
+  };
+
   const selectedPaymentMethod = paymentMethods.find(
     (method) => method.id.toString() === paymentMethodId,
   );
   const linkedPaymentAccounts = selectedPaymentMethod?.accounts || [];
 
   useEffect(() => {
-    const draft = loadTransactionDraft();
+    const draft = loadTransactionDraft(draftScope);
 
     if (!draft?.open) {
+      if (isEditing && transaction) {
+        populateForm(transaction);
+      }
       return;
     }
 
@@ -103,7 +137,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     setPaymentAccountId(draft.paymentAccountId);
     setDate(draft.date);
     setOpen(true);
-  }, []);
+  }, [draftScope, isEditing, transaction]);
 
   useEffect(() => {
     if (!open) {
@@ -111,6 +145,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     }
 
     saveTransactionDraft({
+      scope: draftScope,
       open,
       type,
       amount,
@@ -120,7 +155,13 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       paymentAccountId,
       date,
     });
-  }, [open, type, amount, description, categoryId, paymentMethodId, paymentAccountId, date]);
+  }, [draftScope, open, type, amount, description, categoryId, paymentMethodId, paymentAccountId, date]);
+
+  useEffect(() => {
+    if (isEditing && transaction && !open) {
+      populateForm(transaction);
+    }
+  }, [isEditing, open, transaction]);
 
   useEffect(() => {
     const pendingAccountId = loadPendingTransactionAccountId();
@@ -155,23 +196,26 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   }, [description, open]);
 
   const resetForm = () => {
-    setAmount("");
-    setDescription("");
-    setCategoryId("");
-    setPaymentMethodId("");
-    setPaymentAccountId("");
     setNewCategoryName("");
     setIsCreatingCategory(false);
     setIsSavingCategory(false);
-    setDate(getLocalDateInputValue());
     clearTransactionDraft();
     clearTransactionReturnContext();
     clearPendingTransactionAccountId();
+    populateForm(transaction);
   };
 
   const handleDialogChange = (nextOpen: boolean) => {
     if (isSubmitting) {
       return;
+    }
+
+    if (nextOpen && isEditing && transaction) {
+      const draft = loadTransactionDraft(draftScope);
+
+      if (!draft) {
+        populateForm(transaction);
+      }
     }
 
     setOpen(nextOpen);
@@ -196,6 +240,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     }
 
     saveTransactionDraft({
+      scope: draftScope,
       open: true,
       type,
       amount,
@@ -257,7 +302,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
           ? parseInt(paymentAccountId, 10)
           : undefined,
         date,
-      });
+      }, transaction?.id);
 
       resetForm();
       setOpen(false);
@@ -321,14 +366,16 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogTrigger asChild>
-        <Button
-          size="lg"
-          className="w-full gap-2 font-semibold btn-primary-glow sm:w-auto"
-        >
-          <Plus className="h-5 w-5" />
-          <span className="hidden sm:inline">Nova Transação</span>
-          <span className="sm:hidden">Nova</span>
-        </Button>
+        {trigger ?? (
+          <Button
+            size="lg"
+            className="w-full gap-2 font-semibold btn-primary-glow sm:w-auto"
+          >
+            <Plus className="h-5 w-5" />
+            <span className="hidden sm:inline">Nova Transação</span>
+            <span className="sm:hidden">Nova</span>
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="mx-auto flex max-h-[90vh] w-[95vw] flex-col overflow-hidden p-0 sm:max-w-lg">
         <div
@@ -359,7 +406,9 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                   <TrendingDown className="h-5 w-5" />
                 )}
               </motion.div>
-              Adicionar {type === "income" ? "Ganho" : "Gasto"}
+              {isEditing
+                ? `Editar ${type === "income" ? "Ganho" : "Gasto"}`
+                : `Adicionar ${type === "income" ? "Ganho" : "Gasto"}`}
             </DialogTitle>
           </DialogHeader>
         </div>
@@ -688,8 +737,14 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               </>
             ) : (
               <>
-                <Plus className="mr-2 h-5 w-5" />
-                Adicionar {type === "income" ? "Ganho" : "Gasto"}
+                {isEditing ? (
+                  <Pencil className="mr-2 h-5 w-5" />
+                ) : (
+                  <Plus className="mr-2 h-5 w-5" />
+                )}
+                {isEditing
+                  ? `Salvar ${type === "income" ? "Ganho" : "Gasto"}`
+                  : `Adicionar ${type === "income" ? "Ganho" : "Gasto"}`}
               </>
             )}
           </Button>

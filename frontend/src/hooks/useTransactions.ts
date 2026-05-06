@@ -209,6 +209,46 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     [enabled, isConnected, refreshTransactions],
   );
 
+  const updateTransaction = useCallback(
+    async (id: number, transaction: TransactionInput) => {
+      try {
+        setError(null);
+
+        const updatedTransaction = transactions.find(
+          (currentTransaction) => currentTransaction.id === id,
+        );
+
+        await apiService.updateEntry(id, {
+          type: transaction.type,
+          amount: transaction.amount,
+          description: transaction.description,
+          category_id: transaction.category_id,
+          payment_method_id: transaction.payment_method_id,
+          payment_account_id: transaction.payment_account_id,
+          date: transaction.date,
+        });
+
+        if (enabled && !isConnected) {
+          await refreshTransactions();
+        }
+
+        toast({
+          title: "Transacao atualizada",
+          description: updatedTransaction
+            ? `"${updatedTransaction.description}" foi atualizada com sucesso.`
+            : "A transacao foi atualizada com sucesso.",
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Erro ao atualizar transacao";
+
+        setError(message);
+        throw err;
+      }
+    },
+    [enabled, isConnected, refreshTransactions, transactions],
+  );
+
   const deleteTransaction = useCallback(
     async (id: string) => {
       try {
@@ -253,6 +293,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     error,
     refreshTransactions,
     addTransaction,
+    updateTransaction,
     deleteTransaction,
   };
 }

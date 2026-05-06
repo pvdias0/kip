@@ -12,16 +12,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { TrendingUp, TrendingDown, Trash2, Calendar, Receipt, AlertTriangle } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useCategoryNames } from "@/hooks/useCategoryNames";
+import { TransactionForm } from "@/components/TransactionForm";
+import { TransactionInput } from "@/types/finance";
 
 interface TransactionListProps {
   transactions: Transaction[];
   onDelete: (id: string) => void;
+  onEdit?: (id: number, transaction: TransactionInput) => Promise<void> | void;
   title?: string;
   maxHeight?: string;
   isLoading?: boolean;
@@ -30,6 +34,7 @@ interface TransactionListProps {
 export function TransactionList({
   transactions,
   onDelete,
+  onEdit,
   title = "Transações Recentes",
   maxHeight = "400px",
   isLoading = false,
@@ -247,54 +252,78 @@ export function TransactionList({
                       </span>
                     </div>
 
-                    {/* Delete Button */}
-                    <AlertDialog
-                      open={openDelete === transaction.id}
-                      onOpenChange={(open) =>
-                        setOpenDelete(open ? transaction.id : null)
-                      }
-                    >
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-muted-foreground opacity-60 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 flex-shrink-0 transition-all rounded-xl"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="w-[95vw] sm:max-w-md mx-auto">
-                        <div className="flex flex-col items-center text-center mb-4">
-                          <div className="p-4 rounded-2xl bg-destructive/10 text-destructive mb-4">
-                            <AlertTriangle className="h-8 w-8" />
-                          </div>
-                          <AlertDialogTitle className="text-xl font-display">
-                            Deletar transação?
-                          </AlertDialogTitle>
-                          <AlertDialogDescription className="mt-2">
-                            Tem certeza que deseja deletar{" "}
-                            <span className="font-semibold text-foreground">
-                              "{transaction.description}"
-                            </span>
-                            ? Esta ação não pode ser desfeita.
-                          </AlertDialogDescription>
-                        </div>
-                        <div className="flex gap-3">
-                          <AlertDialogCancel className="mt-0 flex-1 h-11">
-                            Cancelar
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => {
-                              onDelete(String(transaction.id));
-                              setOpenDelete(null);
-                            }}
-                            className="flex-1 h-11 bg-destructive hover:bg-destructive/90"
+                    <div className="flex flex-row gap-1">
+                      {onEdit ? (
+                        <TransactionForm
+                          transaction={transaction}
+                          onSubmit={(nextTransaction, transactionId) => {
+                            if (!transactionId) {
+                              return Promise.resolve();
+                            }
+
+                            return onEdit(transactionId, nextTransaction);
+                          }}
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 text-muted-foreground opacity-60 group-hover:opacity-100 hover:text-primary hover:bg-primary/10 flex-shrink-0 transition-all rounded-xl"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+                      ) : null}
+
+                      {/* Delete Button */}
+                      <AlertDialog
+                        open={openDelete === transaction.id}
+                        onOpenChange={(open) =>
+                          setOpenDelete(open ? transaction.id : null)
+                        }
+                      >
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted-foreground opacity-60 group-hover:opacity-100 hover:text-destructive hover:bg-destructive/10 flex-shrink-0 transition-all rounded-xl"
                           >
-                            Deletar
-                          </AlertDialogAction>
-                        </div>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="w-[95vw] sm:max-w-md mx-auto">
+                          <div className="flex flex-col items-center text-center mb-4">
+                            <div className="p-4 rounded-2xl bg-destructive/10 text-destructive mb-4">
+                              <AlertTriangle className="h-8 w-8" />
+                            </div>
+                            <AlertDialogTitle className="text-xl font-display">
+                              Deletar transação?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="mt-2">
+                              Tem certeza que deseja deletar{" "}
+                              <span className="font-semibold text-foreground">
+                                "{transaction.description}"
+                              </span>
+                              ? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </div>
+                          <div className="flex gap-3">
+                            <AlertDialogCancel className="mt-0 flex-1 h-11">
+                              Cancelar
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => {
+                                onDelete(String(transaction.id));
+                                setOpenDelete(null);
+                              }}
+                              className="flex-1 h-11 bg-destructive hover:bg-destructive/90"
+                            >
+                              Deletar
+                            </AlertDialogAction>
+                          </div>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
                 </motion.div>
               ))}

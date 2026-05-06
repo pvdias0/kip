@@ -96,6 +96,7 @@ export function PeriodTabs() {
     transactions: weekTransactions,
     pagination: weekPagination,
     isLoading: isWeekTransactionsLoading,
+    updateTransaction: updateWeekTransaction,
     deleteTransaction: deleteWeekTransaction,
   } = useTransactions({
     enabled: activeTab === "week",
@@ -119,6 +120,7 @@ export function PeriodTabs() {
     transactions: monthTransactions,
     pagination: monthPagination,
     isLoading: isMonthTransactionsLoading,
+    updateTransaction: updateMonthTransaction,
     deleteTransaction: deleteMonthTransaction,
   } = useTransactions({
     enabled: activeTab === "month",
@@ -225,6 +227,7 @@ export function PeriodTabs() {
 
           <TransactionList
             transactions={weekTransactions}
+            onEdit={updateWeekTransaction}
             onDelete={deleteWeekTransaction}
             title="Transacoes da Semana"
             isLoading={isWeekTransactionsLoading || isWeekBreakdownLoading}
@@ -267,6 +270,7 @@ export function PeriodTabs() {
 
           <TransactionList
             transactions={monthTransactions}
+            onEdit={updateMonthTransaction}
             onDelete={deleteMonthTransaction}
             title="Transacoes do Mes"
             isLoading={isMonthTransactionsLoading}

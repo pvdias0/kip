@@ -1,4 +1,5 @@
 export interface TransactionFormDraft {
+  scope?: string;
   open: boolean;
   type: "income" | "expense";
   amount: string;
@@ -30,7 +31,7 @@ export function saveTransactionDraft(draft: TransactionFormDraft) {
   window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
 }
 
-export function loadTransactionDraft(): TransactionFormDraft | null {
+export function loadTransactionDraft(scope = "create"): TransactionFormDraft | null {
   if (!canUseStorage()) {
     return null;
   }
@@ -42,7 +43,10 @@ export function loadTransactionDraft(): TransactionFormDraft | null {
   }
 
   try {
-    return JSON.parse(raw) as TransactionFormDraft;
+    const draft = JSON.parse(raw) as TransactionFormDraft;
+    const draftScope = draft.scope || "create";
+
+    return draftScope === scope ? draft : null;
   } catch {
     return null;
   }
