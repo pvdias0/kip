@@ -211,7 +211,7 @@ export function TransactionList({
 
                     {/* Content */}
                     <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm text-foreground truncate group-hover:text-foreground transition-colors">
+                      <p className="whitespace-pre-wrap break-words font-semibold text-sm text-foreground transition-colors group-hover:text-foreground">
                         {transaction.description}
                       </p>
                       <div className="flex items-center gap-2 mt-1 flex-wrap">

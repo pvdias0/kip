@@ -179,7 +179,7 @@ export function RankingList({
 
               {/* Content */}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate group-hover:text-foreground transition-colors">
+                <p className="whitespace-pre-wrap break-words font-semibold text-sm transition-colors group-hover:text-foreground">
                   {transaction.description}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-2">

@@ -193,7 +193,7 @@ export function DailyStats({
                             tx.type === 'income' ? 'bg-income' : 'bg-expense'
                           )}
                         />
-                        <p className="truncate text-sm font-medium text-foreground">
+                        <p className="whitespace-pre-wrap break-words text-sm font-medium text-foreground">
                           {tx.description}
                         </p>
                       </div>

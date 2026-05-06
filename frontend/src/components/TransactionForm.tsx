@@ -1,9 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -78,6 +79,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [date, setDate] = useState(getLocalDateInputValue());
+  const descriptionRef = useRef<HTMLTextAreaElement | null>(null);
   const { categories, addCategory } = useCategories();
   const { paymentMethods } = usePaymentMethods();
 
@@ -140,6 +142,17 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     clearPendingTransactionAccountId();
     clearTransactionReturnContext();
   }, [selectedPaymentMethod]);
+
+  useEffect(() => {
+    const field = descriptionRef.current;
+
+    if (!field) {
+      return;
+    }
+
+    field.style.height = "0px";
+    field.style.height = `${field.scrollHeight}px`;
+  }, [description, open]);
 
   const resetForm = () => {
     setAmount("");
@@ -434,12 +447,14 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               <FileText className="h-4 w-4 text-muted-foreground" />
               Descrição
             </Label>
-            <Input
+            <Textarea
               id="description"
+              ref={descriptionRef}
               placeholder="Ex: Almoço no restaurante"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="h-12 border-2 focus:border-primary/50"
+              rows={1}
+              className="min-h-[3rem] resize-none overflow-hidden border-2 focus:border-primary/50"
               required
             />
           </div>

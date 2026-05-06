@@ -1,7 +1,7 @@
 import "./env.js";
-import { createClient } from "redis";
 
 let redisClient = null;
+let redisModulePromise = null;
 
 function getRedisUrl() {
   const value = process.env.REDIS_URL;
@@ -20,6 +20,14 @@ export function isRedisReady() {
   return Boolean(redisClient?.isOpen);
 }
 
+async function loadRedisModule() {
+  if (!redisModulePromise) {
+    redisModulePromise = import("redis");
+  }
+
+  return redisModulePromise;
+}
+
 export async function connectRedis() {
   if (!isRedisConfigured()) {
     console.log("Redis disabled: REDIS_URL is not configured.");
@@ -27,6 +35,15 @@ export async function connectRedis() {
   }
 
   if (!redisClient) {
+    let createClient;
+
+    try {
+      ({ createClient } = await loadRedisModule());
+    } catch (error) {
+      console.error("Redis disabled: package 'redis' is not installed.");
+      return null;
+    }
+
     redisClient = createClient({
       url: getRedisUrl(),
     });
