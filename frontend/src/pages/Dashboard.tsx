@@ -28,7 +28,7 @@ import {
   X,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { addMonths, subMonths, isSameMonth, format } from "date-fns";
+import { addMonths, subMonths, isSameMonth, format, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -37,7 +37,13 @@ const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { transactions } = useTransactions();
+  const monthStart = format(startOfMonth(selectedMonth), "yyyy-MM-dd");
+  const monthEnd = format(endOfMonth(selectedMonth), "yyyy-MM-dd");
+  const { transactions } = useTransactions({
+    startDate: monthStart,
+    endDate: monthEnd,
+    fetchAll: true,
+  });
   const { logout } = useAuth();
   const navigate = useNavigate();
 

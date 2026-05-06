@@ -20,19 +20,32 @@ class ApiService {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(buildApiUrl(endpoint), {
+    const requestUrl = buildApiUrl(endpoint);
+    const response = await fetch(requestUrl, {
       ...options,
       headers,
     });
 
+    const responseText = await response.text();
+    const contentType = response.headers.get("content-type") || "";
+    const isJsonResponse = contentType.includes("application/json");
+
     if (!response.ok) {
-      const error = await response.json().catch(() => ({
-        message: response.statusText,
-      }));
+      const error = isJsonResponse
+        ? JSON.parse(responseText)
+        : {
+            message: responseText.startsWith("<!doctype") || responseText.startsWith("<html")
+              ? `Resposta HTML inesperada em ${requestUrl}`
+              : response.statusText,
+          };
       throw new Error(error.message || "API Error");
     }
 
-    return response.json();
+    if (!isJsonResponse) {
+      throw new Error(`Resposta nao JSON inesperada em ${requestUrl}`);
+    }
+
+    return JSON.parse(responseText);
   }
 
   async register(username: string, password: string) {
@@ -155,11 +168,15 @@ class ApiService {
     type?: "income" | "expense";
     startDate?: string;
     endDate?: string;
+    page?: number;
+    limit?: number;
   }) {
     const params = new URLSearchParams();
     if (filters?.type) params.append("type", filters.type);
     if (filters?.startDate) params.append("startDate", filters.startDate);
     if (filters?.endDate) params.append("endDate", filters.endDate);
+    if (filters?.page) params.append("page", String(filters.page));
+    if (filters?.limit) params.append("limit", String(filters.limit));
 
     const queryString = params.toString();
     const endpoint = queryString ? `/entries?${queryString}` : "/entries";

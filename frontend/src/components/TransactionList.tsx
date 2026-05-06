@@ -17,12 +17,14 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { useCategoryNames } from "@/hooks/useCategoryNames";
 
 interface TransactionListProps {
   transactions: Transaction[];
   onDelete: (id: string) => void;
   title?: string;
   maxHeight?: string;
+  isLoading?: boolean;
 }
 
 export function TransactionList({
@@ -30,8 +32,10 @@ export function TransactionList({
   onDelete,
   title = "Transações Recentes",
   maxHeight = "400px",
+  isLoading = false,
 }: TransactionListProps) {
   const [openDelete, setOpenDelete] = useState<number | null>(null);
+  const { getCategoryName } = useCategoryNames();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -75,6 +79,39 @@ export function TransactionList({
       },
     },
   };
+
+  if (isLoading) {
+    return (
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
+        <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
+          <CardTitle className="text-base sm:text-lg font-display flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <Receipt className="h-4 w-4 sm:h-5 sm:w-5" />
+            </div>
+            <span className="truncate">{title}</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 sm:px-6">
+          <motion.div
+            className="flex flex-col items-center justify-center py-12 text-center"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            <div className="rounded-2xl bg-gradient-to-br from-muted to-muted/50 p-5 mb-4">
+              <Receipt className="h-10 w-10 animate-pulse text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium text-foreground mb-1">
+              Carregando transacoes
+            </p>
+            <p className="text-xs text-muted-foreground max-w-[220px]">
+              Aguarde enquanto buscamos o periodo selecionado.
+            </p>
+          </motion.div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (transactions.length === 0) {
     return (
@@ -184,9 +221,7 @@ export function TransactionList({
                             ? "bg-income/10 text-income"
                             : "bg-expense/10 text-expense"
                         )}>
-                          {transaction.category_id
-                            ? `#${transaction.category_id}`
-                            : "Sem categoria"}
+                          {getCategoryName(transaction.category_id)}
                         </span>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
@@ -245,7 +280,7 @@ export function TransactionList({
                           </AlertDialogDescription>
                         </div>
                         <div className="flex gap-3">
-                          <AlertDialogCancel className="flex-1 h-11">
+                          <AlertDialogCancel className="mt-0 flex-1 h-11">
                             Cancelar
                           </AlertDialogCancel>
                           <AlertDialogAction

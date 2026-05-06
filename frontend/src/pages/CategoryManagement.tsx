@@ -29,7 +29,6 @@ import {
   CheckCircle2,
   Loader2,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 export default function CategoryManagement() {
   const navigate = useNavigate();
@@ -103,7 +102,6 @@ export default function CategoryManagement() {
               </p>
             </div>
           </div>
-          <ThemeToggle showLabel className="self-start sm:self-auto" />
         </div>
 
         {/* Messages */}

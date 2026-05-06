@@ -1,342 +1,258 @@
-import { useState, useEffect, useCallback } from "react";
-import { Transaction, TransactionInput, TransactionSummary } from "@/types/finance";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  parseISO,
-  isWithinInterval,
-} from "date-fns";
+  PaginationInfo,
+  Transaction,
+  TransactionInput,
+  TransactionType,
+} from "@/types/finance";
 import { apiService } from "@/services/api";
 import { useSocket } from "./useSocket";
+import { toast } from "@/components/ui/use-toast";
 
-interface TransactionsStoreState {
-  transactions: Transaction[];
-  isLoading: boolean;
-  error: string | null;
-  hasLoaded: boolean;
+interface UseTransactionsOptions {
+  enabled?: boolean;
+  fetchAll?: boolean;
+  type?: TransactionType;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
 }
 
-const initialStoreState: TransactionsStoreState = {
-  transactions: [],
-  isLoading: false,
-  error: null,
-  hasLoaded: false,
-};
-
-let storeState = initialStoreState;
-let pendingFetch: Promise<void> | null = null;
-const storeListeners = new Set<(state: TransactionsStoreState) => void>();
-
-function emitStoreState() {
-  storeListeners.forEach((listener) => listener(storeState));
+interface EntriesFilters {
+  type?: TransactionType;
+  startDate?: string;
+  endDate?: string;
+  page?: number;
+  limit?: number;
 }
 
-function setStoreState(
-  updater:
-    | TransactionsStoreState
-    | ((previousState: TransactionsStoreState) => TransactionsStoreState),
-) {
-  storeState =
-    typeof updater === "function"
-      ? updater(storeState)
-      : updater;
-
-  emitStoreState();
-}
-
-function subscribeToStore(listener: (state: TransactionsStoreState) => void) {
-  storeListeners.add(listener);
-  return () => {
-    storeListeners.delete(listener);
-  };
-}
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 20;
+const FETCH_ALL_LIMIT = 100;
 
 function normalizeTransaction(transaction: Transaction): Transaction {
   const amount =
     typeof transaction.amount === "string"
-      ? parseFloat(transaction.amount)
+      ? Number.parseFloat(transaction.amount)
       : transaction.amount;
 
   return {
     ...transaction,
     amount: Number.isFinite(amount) ? amount : 0,
-    date: typeof transaction.date === "string"
-      ? transaction.date.slice(0, 10)
-      : transaction.date,
+    date:
+      typeof transaction.date === "string"
+        ? transaction.date.slice(0, 10)
+        : transaction.date,
   };
 }
 
-function sortTransactions(transactions: Transaction[]) {
-  return [...transactions].sort((left, right) => {
-    const dateComparison = right.date.localeCompare(left.date);
-
-    if (dateComparison !== 0) {
-      return dateComparison;
-    }
-
-    return (right.created_at ?? "").localeCompare(left.created_at ?? "");
-  });
+function normalizeTransactions(transactions: Transaction[]) {
+  return transactions.map(normalizeTransaction);
 }
 
-function replaceTransactionsInStore(transactions: Transaction[]) {
-  const normalizedTransactions = transactions.map(normalizeTransaction);
-
-  setStoreState((previousState) => ({
-    ...previousState,
-    transactions: sortTransactions(normalizedTransactions),
-  }));
-}
-
-function upsertTransactionInStore(transaction: Transaction) {
-  const normalizedTransaction = normalizeTransaction(transaction);
-
-  setStoreState((previousState) => ({
-    ...previousState,
-    transactions: sortTransactions([
-      normalizedTransaction,
-      ...previousState.transactions.filter(
-        (currentTransaction) => currentTransaction.id !== normalizedTransaction.id,
-      ),
-    ]),
-  }));
-}
-
-function removeTransactionFromStore(transactionId: number) {
-  setStoreState((previousState) => ({
-    ...previousState,
-    transactions: previousState.transactions.filter(
-      (transaction) => transaction.id !== transactionId,
-    ),
-  }));
-}
-
-async function fetchTransactionsFromApi() {
-  if (pendingFetch) {
-    return pendingFetch;
+function normalizePagination(pagination: PaginationInfo | null | undefined) {
+  if (!pagination) {
+    return null;
   }
 
-  pendingFetch = (async () => {
-    setStoreState((previousState) => ({
-      ...previousState,
-      isLoading: true,
-      error: null,
-    }));
-
-    try {
-      const response = await apiService.getEntries();
-
-      replaceTransactionsInStore(response.entries ?? []);
-
-      setStoreState((previousState) => ({
-        ...previousState,
-        isLoading: false,
-        error: null,
-        hasLoaded: true,
-      }));
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao buscar transações";
-
-      setStoreState((previousState) => ({
-        ...previousState,
-        isLoading: false,
-        error: message,
-        hasLoaded: true,
-      }));
-
-      console.error("Fetch transactions error:", err);
-    } finally {
-      pendingFetch = null;
-    }
-  })();
-
-  return pendingFetch;
+  return {
+    page: Number(pagination.page) || DEFAULT_PAGE,
+    limit: Number(pagination.limit) || DEFAULT_LIMIT,
+    totalItems: Number(pagination.totalItems) || 0,
+    totalPages: Number(pagination.totalPages) || 1,
+    hasNextPage: Boolean(pagination.hasNextPage),
+    hasPreviousPage: Boolean(pagination.hasPreviousPage),
+  } satisfies PaginationInfo;
 }
 
-export function useTransactions() {
-  const [state, setState] = useState(storeState);
+async function fetchAllTransactions(filters: EntriesFilters) {
+  const limit = filters.limit ?? FETCH_ALL_LIMIT;
+  let currentPage = 1;
+  let hasNextPage = true;
+  const transactions: Transaction[] = [];
+
+  while (hasNextPage) {
+    const response = await apiService.getEntries({
+      ...filters,
+      page: currentPage,
+      limit,
+    });
+
+    transactions.push(...(response.entries ?? []));
+    hasNextPage = Boolean(response.pagination?.hasNextPage);
+    currentPage += 1;
+  }
+
+  return normalizeTransactions(transactions);
+}
+
+export function useTransactions(options: UseTransactionsOptions = {}) {
+  const {
+    enabled = true,
+    fetchAll = false,
+    type,
+    startDate,
+    endDate,
+    page = DEFAULT_PAGE,
+    limit = DEFAULT_LIMIT,
+  } = options;
   const { on, isConnected } = useSocket();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => subscribeToStore(setState), []);
+  const filters = useMemo(
+    () => ({
+      type,
+      startDate,
+      endDate,
+      page,
+      limit: fetchAll ? Math.max(limit, FETCH_ALL_LIMIT) : limit,
+    }),
+    [type, startDate, endDate, page, limit, fetchAll],
+  );
 
-  useEffect(() => {
-    if (!storeState.hasLoaded && !storeState.isLoading) {
-      void fetchTransactionsFromApi();
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isConnected) {
+  const refreshTransactions = useCallback(async () => {
+    if (!enabled) {
       return;
     }
 
-    const unsubscribeCreated = on("transaction:created", (newTransaction) => {
-      upsertTransactionInStore(newTransaction as Transaction);
-    });
+    try {
+      setIsLoading(true);
+      setError(null);
 
-    const unsubscribeUpdated = on("transaction:updated", (updatedTransaction) => {
-      upsertTransactionInStore(updatedTransaction as Transaction);
-    });
-
-    const unsubscribeDeleted = on("transaction:deleted", (data) => {
-      const transactionId = Number((data as { id: string | number }).id);
-
-      if (Number.isInteger(transactionId)) {
-        removeTransactionFromStore(transactionId);
+      if (fetchAll) {
+        const allTransactions = await fetchAllTransactions(filters);
+        setTransactions(allTransactions);
+        setPagination(null);
+      } else {
+        const response = await apiService.getEntries(filters);
+        setTransactions(normalizeTransactions(response.entries ?? []));
+        setPagination(normalizePagination(response.pagination));
       }
-    });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro ao buscar transacoes";
+
+      setError(message);
+      console.error("Fetch transactions error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [enabled, fetchAll, filters]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setTransactions([]);
+      setPagination(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    void refreshTransactions();
+  }, [enabled, refreshTransactions]);
+
+  useEffect(() => {
+    if (!enabled || !isConnected) {
+      return;
+    }
+
+    const refetch = () => {
+      void refreshTransactions();
+    };
+
+    const unsubscribeCreated = on("transaction:created", refetch);
+    const unsubscribeUpdated = on("transaction:updated", refetch);
+    const unsubscribeDeleted = on("transaction:deleted", refetch);
 
     return () => {
       unsubscribeCreated();
       unsubscribeUpdated();
       unsubscribeDeleted();
     };
-  }, [isConnected, on]);
+  }, [enabled, isConnected, on, refreshTransactions]);
 
-  const addTransaction = useCallback(async (transaction: TransactionInput) => {
-    try {
-      setStoreState((previousState) => ({
-        ...previousState,
-        error: null,
-      }));
+  const addTransaction = useCallback(
+    async (transaction: TransactionInput) => {
+      try {
+        setError(null);
 
-      const response = await apiService.createEntry({
-        type: transaction.type,
-        amount: transaction.amount,
-        description: transaction.description,
-        category_id: transaction.category_id,
-        payment_method_id: transaction.payment_method_id,
-        payment_account_id: transaction.payment_account_id,
-        date: transaction.date,
-      });
+        await apiService.createEntry({
+          type: transaction.type,
+          amount: transaction.amount,
+          description: transaction.description,
+          category_id: transaction.category_id,
+          payment_method_id: transaction.payment_method_id,
+          payment_account_id: transaction.payment_account_id,
+          date: transaction.date,
+        });
 
-      if (response?.entry) {
-        upsertTransactionInStore(response.entry as Transaction);
-      } else {
-        await fetchTransactionsFromApi();
+        if (enabled && !isConnected) {
+          await refreshTransactions();
+        }
+
+        toast({
+          title: "Transacao criada",
+          description: "A transacao foi registrada com sucesso.",
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Erro ao adicionar transacao";
+
+        setError(message);
+        throw err;
       }
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao adicionar transação";
-
-      setStoreState((previousState) => ({
-        ...previousState,
-        error: message,
-      }));
-
-      throw err;
-    }
-  }, []);
-
-  const deleteTransaction = useCallback(async (id: string) => {
-    try {
-      setStoreState((previousState) => ({
-        ...previousState,
-        error: null,
-      }));
-
-      const numericId = Number.parseInt(id, 10);
-
-      await apiService.deleteEntry(numericId);
-      removeTransactionFromStore(numericId);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Erro ao deletar transação";
-
-      setStoreState((previousState) => ({
-        ...previousState,
-        error: message,
-      }));
-
-      throw err;
-    }
-  }, []);
-
-  const getFilteredTransactions = useCallback(
-    (startDate: Date, endDate: Date): Transaction[] => {
-      return state.transactions.filter((transaction) => {
-        const date = parseISO(transaction.date);
-        return isWithinInterval(date, { start: startDate, end: endDate });
-      });
     },
-    [state.transactions],
+    [enabled, isConnected, refreshTransactions],
   );
 
-  const getSummary = useCallback(
-    (filteredTransactions: Transaction[]): TransactionSummary => {
-      const totalIncome = filteredTransactions
-        .filter((transaction) => transaction.type === "income")
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+  const deleteTransaction = useCallback(
+    async (id: string) => {
+      try {
+        setError(null);
 
-      const totalExpense = filteredTransactions
-        .filter((transaction) => transaction.type === "expense")
-        .reduce((sum, transaction) => sum + transaction.amount, 0);
+        const numericId = Number.parseInt(id, 10);
+        const deletedTransaction = transactions.find(
+          (transaction) => transaction.id === numericId,
+        );
 
-      return {
-        totalIncome,
-        totalExpense,
-        balance: totalIncome - totalExpense,
-      };
+        await apiService.deleteEntry(numericId);
+
+        setTransactions((previousTransactions) =>
+          previousTransactions.filter((transaction) => transaction.id !== numericId),
+        );
+
+        if (enabled && !isConnected) {
+          await refreshTransactions();
+        }
+
+        toast({
+          title: "Transacao deletada",
+          description: deletedTransaction
+            ? `"${deletedTransaction.description}" foi removida com sucesso.`
+            : "A transacao foi removida com sucesso.",
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Erro ao deletar transacao";
+
+        setError(message);
+        throw err;
+      }
     },
-    [],
-  );
-
-  const getWeekSummary = useCallback(
-    (weekStart: Date): TransactionSummary => {
-      const filteredTransactions = getFilteredTransactions(
-        startOfWeek(weekStart, { weekStartsOn: 0 }),
-        endOfWeek(weekStart, { weekStartsOn: 0 }),
-      );
-
-      return getSummary(filteredTransactions);
-    },
-    [getFilteredTransactions, getSummary],
-  );
-
-  const getMonthSummary = useCallback(
-    (monthDate: Date): TransactionSummary => {
-      const filteredTransactions = getFilteredTransactions(
-        startOfMonth(monthDate),
-        endOfMonth(monthDate),
-      );
-
-      return getSummary(filteredTransactions);
-    },
-    [getFilteredTransactions, getSummary],
-  );
-
-  const getWeekTransactions = useCallback(
-    (weekStart: Date): Transaction[] => {
-      return getFilteredTransactions(
-        startOfWeek(weekStart, { weekStartsOn: 0 }),
-        endOfWeek(weekStart, { weekStartsOn: 0 }),
-      );
-    },
-    [getFilteredTransactions],
-  );
-
-  const getMonthTransactions = useCallback(
-    (monthDate: Date): Transaction[] => {
-      return getFilteredTransactions(
-        startOfMonth(monthDate),
-        endOfMonth(monthDate),
-      );
-    },
-    [getFilteredTransactions],
+    [enabled, isConnected, refreshTransactions, transactions],
   );
 
   return {
-    transactions: state.transactions,
+    transactions,
+    pagination,
+    isLoading,
+    error,
+    refreshTransactions,
     addTransaction,
     deleteTransaction,
-    getWeekSummary,
-    getMonthSummary,
-    getWeekTransactions,
-    getMonthTransactions,
-    getSummary,
-    isLoading: state.isLoading,
-    error: state.error,
   };
 }

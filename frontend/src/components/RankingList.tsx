@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, type Variants } from "framer-motion";
+import { useCategoryNames } from "@/hooks/useCategoryNames";
 
 interface RankingListProps {
   transactions: Transaction[];
@@ -19,6 +20,8 @@ export function RankingList({
   type,
   emptyMessage = "Nenhuma transação",
 }: RankingListProps) {
+  const { getCategoryName } = useCategoryNames();
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -186,9 +189,7 @@ export function RankingList({
                       ? "bg-income/10 text-income"
                       : "bg-expense/10 text-expense"
                   )}>
-                    {transaction.category_id
-                      ? `#${transaction.category_id}`
-                      : "Sem categoria"}
+                    {getCategoryName(transaction.category_id)}
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {format(parseISO(transaction.date), "dd 'de' MMM", {

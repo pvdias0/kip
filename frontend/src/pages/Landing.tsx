@@ -15,6 +15,9 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import heroDesktop from "../../assets/lp-desktop.png";
+import heroTablet from "../../assets/lp-tablet.png";
+import heroMobile from "../../assets/lp-mobile.png";
 
 const Landing = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -190,13 +193,36 @@ const Landing = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-12 sm:py-20 lg:py-32">
+      <section className="relative isolate overflow-hidden">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="max-w-4xl mx-auto text-center"
+          className="relative min-h-[calc(100vh-4.5rem)] text-center"
         >
+          <div className="absolute inset-0 md:hidden">
+            <div
+              className="h-full w-full bg-cover bg-center"
+              style={{ backgroundImage: `url(${heroMobile})` }}
+            />
+          </div>
+          <div className="absolute inset-0 hidden md:block lg:hidden">
+            <div
+              className="h-full w-full bg-cover bg-center"
+              style={{ backgroundImage: `url(${heroTablet})` }}
+            />
+          </div>
+          <div className="absolute inset-0 hidden lg:block">
+            <div
+              className="h-full w-full bg-cover bg-center"
+              style={{ backgroundImage: `url(${heroDesktop})` }}
+            />
+          </div>
+          <div className="absolute inset-0 bg-background/35 dark:bg-background/45" />
+          <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/70 to-primary/20 dark:from-background/90 dark:via-background/75 dark:to-background/35" />
+          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
+          <div className="relative z-10 container mx-auto flex min-h-[calc(100vh-4.5rem)] items-center px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+            <div className="mx-auto max-w-4xl">
           {/* Badge */}
           <motion.div variants={itemVariants} className="mb-6">
             <span className="inline-block bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
@@ -247,7 +273,7 @@ const Landing = () => {
           {/* Hero Image/Illustration */}
           <motion.div
             variants={itemVariants}
-            className="bg-gradient-to-b from-primary/10 to-accent/10 rounded-lg border border-primary/20 p-6 sm:p-8 lg:p-12 overflow-hidden"
+            className="rounded-[1.5rem] border border-white/25 bg-background/45 p-6 backdrop-blur-md sm:p-8 lg:p-12 dark:border-white/10 dark:bg-background/40"
           >
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               {/* Stat Cards */}
@@ -277,6 +303,8 @@ const Landing = () => {
               </div>
             </div>
           </motion.div>
+            </div>
+          </div>
         </motion.div>
       </section>
 

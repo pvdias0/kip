@@ -5,10 +5,33 @@ import {
   emitTransactionDeleted,
 } from "../utils/socket.js";
 import { validatePaymentSelection } from "../utils/paymentMethods.js";
+import {
+  buildEntriesCacheDescriptor,
+  buildStatsCacheDescriptor,
+  bumpEntryCacheVersions,
+  readJsonCache,
+  writeJsonCache,
+} from "../utils/cache.js";
+
+const CACHE_HEADER_NAME = "X-Kip-Cache";
+
+function setCacheStatus(res, status) {
+  res.set(CACHE_HEADER_NAME, status);
+}
 
 function parsePositiveInt(value) {
   const parsed = Number.parseInt(value, 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parsePaginationValue(value, fallback, maxValue = 100) {
+  const parsedValue = parsePositiveInt(value);
+
+  if (!parsedValue) {
+    return fallback;
+  }
+
+  return Math.min(parsedValue, maxValue);
 }
 
 function hasOwn(obj, key) {
@@ -79,17 +102,17 @@ function buildEntriesQuery(baseQuery, params, type, startDate, endDate) {
   let query = baseQuery;
 
   if (type && ["income", "expense"].includes(type)) {
-    query += " AND e.type = $" + (params.length + 1);
+    query += " AND e.type = $" + (params.length + 1) + "::entry_type";
     params.push(type);
   }
 
   if (startDate) {
-    query += " AND e.date >= $" + (params.length + 1);
+    query += " AND e.date >= $" + (params.length + 1) + "::date";
     params.push(startDate);
   }
 
   if (endDate) {
-    query += " AND e.date <= $" + (params.length + 1);
+    query += " AND e.date <= $" + (params.length + 1) + "::date";
     params.push(endDate);
   }
 
@@ -189,6 +212,8 @@ export const createEntry = async (req, res) => {
 
     const entry = await getEntryWithRelations(userId, result.rows[0].id, pool);
 
+    await bumpEntryCacheVersions(userId, normalizedDate);
+
     emitTransactionCreated(userId, entry);
 
     res.status(201).json({
@@ -210,6 +235,28 @@ export const getEntries = async (req, res) => {
   try {
     const userId = req.user.id;
     const { type, startDate, endDate } = req.query;
+    const page = parsePaginationValue(req.query.page, 1, Number.MAX_SAFE_INTEGER);
+    const limit = parsePaginationValue(req.query.limit, 20);
+    const offset = (page - 1) * limit;
+    const cacheDescriptor = await buildEntriesCacheDescriptor({
+      userId,
+      type,
+      startDate,
+      endDate,
+      page,
+      limit,
+    });
+
+    if (cacheDescriptor) {
+      const cachedPayload = await readJsonCache(cacheDescriptor.key);
+
+      if (cachedPayload) {
+        setCacheStatus(res, "HIT");
+        return res.json(cachedPayload);
+      }
+    } else {
+      setCacheStatus(res, "BYPASS");
+    }
 
     const params = [userId];
     let query = `
@@ -224,14 +271,45 @@ export const getEntries = async (req, res) => {
     `;
 
     query = buildEntriesQuery(query, params, type, startDate, endDate);
-    query += " ORDER BY e.date DESC, e.created_at DESC";
+    const countParams = [userId];
+    let countQuery = `
+      SELECT COUNT(*) AS total
+      FROM entries e
+      WHERE e.user_id = $1
+    `;
 
-    const result = await pool.query(query, params);
+    countQuery = buildEntriesQuery(countQuery, countParams, type, startDate, endDate);
+    query += ` ORDER BY e.date DESC, e.created_at DESC LIMIT $${params.length + 1} OFFSET $${
+      params.length + 2
+    }`;
+    params.push(limit, offset);
 
-    res.json({
+    const [result, countResult] = await Promise.all([
+      pool.query(query, params),
+      pool.query(countQuery, countParams),
+    ]);
+    const totalItems = Number.parseInt(countResult.rows[0]?.total ?? "0", 10);
+    const totalPages = totalItems === 0 ? 1 : Math.ceil(totalItems / limit);
+
+    const payload = {
       status: "OK",
       entries: result.rows.map(normalizeEntry),
-    });
+      pagination: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    };
+
+    if (cacheDescriptor) {
+      await writeJsonCache(cacheDescriptor.key, payload, cacheDescriptor.ttl);
+      setCacheStatus(res, "MISS");
+    }
+
+    res.json(payload);
   } catch (error) {
     console.error("Get entries error:", error);
     res.status(500).json({
@@ -285,6 +363,7 @@ export const updateEntry = async (req, res) => {
     }
 
     const existingEntry = existingResult.rows[0];
+    const previousEntryDate = normalizeEntryDateValue(existingEntry.date);
     const payload = req.body;
 
     if (payload.amount && payload.amount <= 0) {
@@ -386,6 +465,12 @@ export const updateEntry = async (req, res) => {
 
     const entry = await getEntryWithRelations(userId, result.rows[0].id, pool);
 
+    await bumpEntryCacheVersions(
+      userId,
+      previousEntryDate,
+      normalizeEntryDateValue(payload.date ?? existingEntry.date),
+    );
+
     emitTransactionUpdated(userId, entry);
 
     res.json({
@@ -409,7 +494,7 @@ export const deleteEntry = async (req, res) => {
     const userId = req.user.id;
 
     const result = await pool.query(
-      "DELETE FROM entries WHERE id = $1 AND user_id = $2 RETURNING id",
+      "DELETE FROM entries WHERE id = $1 AND user_id = $2 RETURNING id, date",
       [id, userId],
     );
 
@@ -419,6 +504,8 @@ export const deleteEntry = async (req, res) => {
         message: "Entrada não encontrada",
       });
     }
+
+    await bumpEntryCacheVersions(userId, normalizeEntryDateValue(result.rows[0].date));
 
     emitTransactionDeleted(userId, result.rows[0].id);
 
@@ -440,6 +527,22 @@ export const getStats = async (req, res) => {
   try {
     const userId = req.user.id;
     const { startDate, endDate } = req.query;
+    const cacheDescriptor = await buildStatsCacheDescriptor({
+      userId,
+      startDate,
+      endDate,
+    });
+
+    if (cacheDescriptor) {
+      const cachedPayload = await readJsonCache(cacheDescriptor.key);
+
+      if (cachedPayload) {
+        setCacheStatus(res, "HIT");
+        return res.json(cachedPayload);
+      }
+    } else {
+      setCacheStatus(res, "BYPASS");
+    }
 
     const params = [userId];
     let query =
@@ -461,14 +564,21 @@ export const getStats = async (req, res) => {
       }
     });
 
-    res.json({
+    const payload = {
       status: "OK",
       stats: {
         totalIncome,
         totalExpense,
         balance: totalIncome - totalExpense,
       },
-    });
+    };
+
+    if (cacheDescriptor) {
+      await writeJsonCache(cacheDescriptor.key, payload, cacheDescriptor.ttl);
+      setCacheStatus(res, "MISS");
+    }
+
+    res.json(payload);
   } catch (error) {
     console.error("Get stats error:", error);
     res.status(500).json({

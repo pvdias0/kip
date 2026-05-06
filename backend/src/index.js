@@ -6,6 +6,7 @@ import { existsSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pool, { testConnection } from "./config/database.js";
+import { connectRedis } from "./config/redis.js";
 import { errorHandler } from "./middleware/auth.js";
 import {
   authLimiter,
@@ -119,6 +120,8 @@ const startServer = async () => {
     console.error("Database is not accessible. Check the credentials and try again.");
     process.exit(1);
   }
+
+  await connectRedis();
 
   httpServer.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

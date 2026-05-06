@@ -20,13 +20,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { KipLogo } from "@/components/ui/KipLogo";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index = () => {
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { addTransaction, deleteTransaction } = useTransactions();
-  const { logout } = useAuth();
+  const { addTransaction } = useTransactions({ enabled: false });
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const displayName = user?.username?.split("@")[0] || "Usuário";
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
 
@@ -43,9 +46,9 @@ const Index = () => {
       opacity: 1,
       transition: {
         duration: 0.5,
-        ease: [0.25, 0.46, 0.45, 0.94] as const
-      }
-    }
+        ease: [0.25, 0.46, 0.45, 0.94] as const,
+      },
+    },
   };
 
   const mainVariants: Variants = {
@@ -56,9 +59,9 @@ const Index = () => {
       transition: {
         duration: 0.5,
         delay: 0.2,
-        ease: [0.25, 0.46, 0.45, 0.94] as const
-      }
-    }
+        ease: [0.25, 0.46, 0.45, 0.94] as const,
+      },
+    },
   };
 
   return (
@@ -77,7 +80,7 @@ const Index = () => {
               <KipLogo size="sm" showText={false} />
               <div className="min-w-0">
                 <h1 className="text-lg sm:text-xl font-display font-bold text-foreground truncate">
-                  Minhas Finanças
+                  {displayName}
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground capitalize truncate">
                   {today}
@@ -119,7 +122,7 @@ const Index = () => {
               </Link>
               <ThemeToggle />
               <div className="w-px h-6 bg-border mx-2" />
-              <TransactionForm onSubmit={addTransaction} />
+              {!isMobile ? <TransactionForm onSubmit={addTransaction} /> : null}
               <Button
                 variant="ghost"
                 size="icon"
@@ -133,7 +136,7 @@ const Index = () => {
 
             {/* Mobile Menu Button */}
             <div className="flex md:hidden items-center gap-2">
-              <TransactionForm onSubmit={addTransaction} />
+              {isMobile ? <TransactionForm onSubmit={addTransaction} /> : null}
               <Button
                 variant="ghost"
                 size="icon"
@@ -161,31 +164,19 @@ const Index = () => {
               >
                 <nav className="flex flex-col gap-1 pt-4 pb-2 border-t border-border/50 mt-4">
                   <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-3 h-11"
-                    >
+                    <Button variant="ghost" className="w-full justify-start gap-3 h-11">
                       <BarChart3 className="h-5 w-5" />
                       <span>Dashboard</span>
                     </Button>
                   </Link>
                   <Link to="/categories" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-3 h-11"
-                    >
+                    <Button variant="ghost" className="w-full justify-start gap-3 h-11">
                       <Settings className="h-5 w-5" />
                       <span>Categorias</span>
                     </Button>
                   </Link>
-                  <Link
-                    to="/payment-methods"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start gap-3 h-11"
-                    >
+                  <Link to="/payment-methods" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start gap-3 h-11">
                       <CreditCard className="h-5 w-5" />
                       <span>Pagamentos</span>
                     </Button>
@@ -216,9 +207,7 @@ const Index = () => {
       <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-display">
-              Deseja sair?
-            </AlertDialogTitle>
+            <AlertDialogTitle className="text-xl font-display">Deseja sair?</AlertDialogTitle>
             <AlertDialogDescription className="text-base">
               Você será redirecionado para a página de login.
             </AlertDialogDescription>
@@ -242,7 +231,7 @@ const Index = () => {
         initial="hidden"
         animate="visible"
       >
-        <PeriodTabs onDeleteTransaction={deleteTransaction} />
+        <PeriodTabs />
       </motion.main>
 
       {/* Footer */}
