@@ -217,3 +217,35 @@ export const idParamValidation = [
     .isInt({ min: 1 })
     .withMessage("ID invalido"),
 ];
+
+export const whatsappProfileValidation = [
+  body("phone_number")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ min: 10, max: 20 })
+    .withMessage("Numero de WhatsApp invalido"),
+  body("opted_in")
+    .isBoolean()
+    .withMessage("O campo opted_in deve ser booleano"),
+  body("opt_in_source")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 80 })
+    .withMessage("Origem do opt-in muito longa"),
+  body("receive_support_messages")
+    .optional()
+    .isBoolean()
+    .withMessage("receive_support_messages deve ser booleano"),
+  body("receive_transactional_messages")
+    .optional()
+    .isBoolean()
+    .withMessage("receive_transactional_messages deve ser booleano"),
+  body("receive_weekly_summary")
+    .optional()
+    .isBoolean()
+    .withMessage("receive_weekly_summary deve ser booleano"),
+  body("receive_budget_alerts")
+    .optional()
+    .isBoolean()
+    .withMessage("receive_budget_alerts deve ser booleano"),
+];

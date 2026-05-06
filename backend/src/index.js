@@ -19,6 +19,9 @@ import categoriesRoutes from "./routes/categories.js";
 import entriesRoutes from "./routes/entries.js";
 import paymentMethodsRoutes from "./routes/paymentMethods.js";
 import passwordResetRoutes from "./routes/passwordReset.js";
+import whatsappRoutes from "./routes/whatsapp.js";
+import { isWhatsAppConfigured } from "./config/whatsapp.js";
+import { syncWhatsAppChannelConfig } from "./utils/whatsapp.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -100,6 +103,7 @@ app.use("/api/auth", passwordResetRoutes);
 app.use("/api/categories", categoriesRoutes);
 app.use("/api/entries", entriesRoutes);
 app.use("/api/payment-methods", paymentMethodsRoutes);
+app.use("/api/whatsapp", whatsappRoutes);
 
 const frontendPath = path.join(__dirname, "../../frontend/dist");
 const frontendEntryPoint = path.join(frontendPath, "index.html");
@@ -119,6 +123,18 @@ const startServer = async () => {
   if (!dbConnected) {
     console.error("Database is not accessible. Check the credentials and try again.");
     process.exit(1);
+  }
+
+  if (isWhatsAppConfigured()) {
+    try {
+      await syncWhatsAppChannelConfig(pool);
+      console.log("WhatsApp channel config synced from environment.");
+    } catch (whatsAppConfigError) {
+      console.error(
+        "Failed to sync WhatsApp channel config:",
+        whatsAppConfigError.message,
+      );
+    }
   }
 
   await connectRedis();
