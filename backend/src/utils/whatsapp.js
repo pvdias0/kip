@@ -39,6 +39,26 @@ function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function buildBrazilianPhoneVariants(digits) {
+  const variants = [];
+  const hasCountryCode = digits.startsWith("55");
+  const nationalDigits = hasCountryCode ? digits.slice(2) : digits;
+
+  if (nationalDigits.length === 10) {
+    variants.push(`${nationalDigits.slice(0, 2)}9${nationalDigits.slice(2)}`);
+  }
+
+  if (nationalDigits.length === 11 && nationalDigits[2] === "9") {
+    variants.push(`${nationalDigits.slice(0, 2)}${nationalDigits.slice(3)}`);
+  }
+
+  if (hasCountryCode) {
+    return variants.map((value) => `55${value}`);
+  }
+
+  return variants;
+}
+
 function buildWhatsAppPhoneNumberCandidates(input) {
   const digits = normalizePhoneDigits(input);
 
@@ -46,11 +66,15 @@ function buildWhatsAppPhoneNumberCandidates(input) {
     return [];
   }
 
+  const brazilianVariants = buildBrazilianPhoneVariants(digits);
+
   if (digits.length <= 11 && !digits.startsWith("55")) {
-    return uniqueValues([`+55${digits}`, `+${digits}`]);
+    return uniqueValues(
+      [`+55${digits}`, ...brazilianVariants.map((value) => `+55${value}`), `+${digits}`],
+    );
   }
 
-  return [`+${digits}`];
+  return uniqueValues([`+${digits}`, ...brazilianVariants.map((value) => `+${value}`)]);
 }
 
 export function normalizeWhatsAppPhoneNumber(input) {
