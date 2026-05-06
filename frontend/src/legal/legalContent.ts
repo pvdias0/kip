@@ -1,5 +1,5 @@
-export const TERMS_OF_SERVICE_VERSION = "2026-05-06";
-export const PRIVACY_POLICY_VERSION = "2026-05-06";
+export const TERMS_OF_SERVICE_VERSION = "2026-05-06.1";
+export const PRIVACY_POLICY_VERSION = "2026-05-06.1";
 export const LEGAL_LAST_UPDATED_LABEL = "6 de maio de 2026";
 
 type LegalSection = {
@@ -30,14 +30,14 @@ export const privacyPolicyDocument: LegalDocument = {
     {
       heading: "1. Dados coletados",
       paragraphs: [
-        "O KIP coleta dados fornecidos diretamente pelo usuario, como nome, email, senha criptografada, categorias criadas, transacoes financeiras, formas de pagamento e contas de pagamento cadastradas.",
+        "O KIP coleta dados fornecidos diretamente pelo usuario, como nome, email, senha criptografada, categorias criadas, transacoes financeiras, formas de pagamento, contas de pagamento e numero de WhatsApp quando o canal e configurado no perfil.",
         "Tambem podem ser registrados dados tecnicos e operacionais ligados ao uso do sistema, como token de recuperacao de senha, eventos de autenticacao, identificadores de sessao, endereco IP e user agent quando necessario para seguranca, auditoria e cumprimento regulatorio.",
       ],
     },
     {
       heading: "2. Finalidades do tratamento",
       paragraphs: [
-        "Os dados sao utilizados para criar e administrar a conta, autenticar o usuario, disponibilizar o painel financeiro, gerar estatisticas, enviar emails de verificacao e recuperacao de senha, manter a integridade do sistema e prevenir uso indevido.",
+        "Os dados sao utilizados para criar e administrar a conta, autenticar o usuario, disponibilizar o painel financeiro, gerar estatisticas, enviar emails de verificacao e recuperacao de senha, operar o canal de WhatsApp quando habilitado, manter a integridade do sistema e prevenir uso indevido.",
         "O KIP tambem utiliza os dados para viabilizar sincronizacao em tempo real, melhorar a experiencia de uso, investigar incidentes e cumprir obrigacoes legais ou ordens validas de autoridades competentes.",
       ],
     },
@@ -81,7 +81,15 @@ export const privacyPolicyDocument: LegalDocument = {
       ],
     },
     {
-      heading: "8. Atualizacoes desta politica",
+      heading: "8. Consentimento para canal WhatsApp",
+      paragraphs: [
+        "Ao cadastrar voluntariamente seu numero de WhatsApp no perfil, o usuario declara consentimento para receber comunicacoes do KIP nesse canal conforme as preferencias configuradas.",
+        "A rastreabilidade tecnica desse consentimento pode ser registrada internamente pelo sistema para fins de auditoria, seguranca e conformidade, sem necessidade de exibicao desse detalhe operacional na interface.",
+        "O usuario pode atualizar seu numero, desativar o recebimento geral ou ajustar preferencias de mensagens a qualquer momento nas configuracoes da conta.",
+      ],
+    },
+    {
+      heading: "9. Atualizacoes desta politica",
       paragraphs: [
         "Esta politica pode ser atualizada para refletir alteracoes legais, tecnicas ou de produto. Quando isso ocorrer, uma nova versao podera ser apresentada ao usuario e um novo aceite podera ser exigido antes do uso continuado da plataforma.",
       ],
@@ -110,6 +118,7 @@ export const termsOfServiceDocument: LegalDocument = {
       paragraphs: [
         "O usuario e responsavel por fornecer informacoes verdadeiras, manter seus dados atualizados e proteger suas credenciais de acesso. O compartilhamento indevido de conta e vedado.",
         "A confirmacao de email e parte obrigatoria do processo de ativacao da conta. Sem ela, o acesso autenticado nao e liberado.",
+        "Ao cadastrar um numero de WhatsApp no perfil da conta, o usuario concorda com o uso desse canal para as comunicacoes habilitadas, podendo ajustar ou revogar preferencias posteriormente na propria plataforma.",
       ],
     },
     {
@@ -157,7 +166,14 @@ export const termsOfServiceDocument: LegalDocument = {
       ],
     },
     {
-      heading: "9. Atualizacoes destes termos",
+      heading: "9. Canal WhatsApp e consentimento",
+      paragraphs: [
+        "O cadastro do numero de WhatsApp na plataforma e considerado manifestacao de consentimento para contato no canal, nos limites das preferencias selecionadas pelo usuario.",
+        "O KIP pode manter registros internos sobre esse consentimento para auditoria e conformidade, sem que isso represente exposicao adicional de dados para terceiros fora das hipoteses previstas nestes termos e na Politica de Privacidade.",
+      ],
+    },
+    {
+      heading: "10. Atualizacoes destes termos",
       paragraphs: [
         "Versoes futuras destes termos podem substituir a presente redacao. Quando a mudanca impactar o uso do servico, o usuario podera ser obrigado a registrar novo aceite antes de continuar utilizando as funcionalidades protegidas.",
       ],

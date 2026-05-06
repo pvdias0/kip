@@ -31,12 +31,6 @@ import {
 const BRAZIL_TIME_ZONE = "America/Fortaleza";
 const CANCEL_PATTERN = /^(cancelar|cancela|cancel|parar|sair)$/i;
 const HELP_PATTERN = /^(\/?ajuda|\/?help)$/i;
-const TRANSACTIONAL_INTENTS = new Set([
-  "get_entries",
-  "create_entry",
-  "create_payment_method",
-  "create_payment_account",
-]);
 
 function getLocalDateString(date = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-CA", {
@@ -663,21 +657,6 @@ async function executeIntent({ intent, slots, userContext, contact, client }) {
   };
 }
 
-function getContactPreferences(contact) {
-  return {
-    receiveSupportMessages: contact?.receive_support_messages ?? true,
-    receiveTransactionalMessages: contact?.receive_transactional_messages ?? true,
-  };
-}
-
-function buildSupportPreferenceMessage() {
-  return "As mensagens de suporte do WhatsApp estao desativadas no seu perfil do KIP.";
-}
-
-function buildTransactionalPreferenceMessage() {
-  return "As mensagens transacionais do WhatsApp estao desativadas no seu perfil do KIP. Ative essa opcao para continuar.";
-}
-
 async function replyAndPersistSession({
   contact,
   messageId,
@@ -767,7 +746,6 @@ export async function handleIncomingWhatsAppMessage(message) {
       return true;
     }
 
-    const preferences = getContactPreferences(contact);
     const inboundAt = getDateFromWhatsAppTimestamp(message?.timestamp) || new Date();
     const messageText = getTextFromWhatsAppMessage(message).trim();
 
@@ -817,7 +795,7 @@ export async function handleIncomingWhatsAppMessage(message) {
         pendingQuestion: null,
         slotState: {},
         replyText:
-          "Seu WhatsApp esta vinculado, mas o recebimento pelo WhatsApp ainda nao foi ativado no KIP. Ative a opcao no seu perfil do app para continuar.",
+          "Seu WhatsApp ainda nao esta habilitado no KIP. Cadastre seu numero no perfil do app para continuar.",
         closeSessionAfterReply: true,
         client,
       });
@@ -825,10 +803,6 @@ export async function handleIncomingWhatsAppMessage(message) {
     }
 
     if (CANCEL_PATTERN.test(messageText)) {
-      const replyText = preferences.receiveSupportMessages
-        ? "Fluxo cancelado. Quando quiser, envie uma nova mensagem."
-        : buildSupportPreferenceMessage();
-
       await replyAndPersistSession({
         contact,
         messageId: message?.id || null,
@@ -838,7 +812,7 @@ export async function handleIncomingWhatsAppMessage(message) {
         currentStep: null,
         pendingQuestion: null,
         slotState: {},
-        replyText,
+        replyText: "Fluxo cancelado. Quando quiser, envie uma nova mensagem.",
         closeSessionAfterReply: true,
         client,
       });
@@ -846,10 +820,6 @@ export async function handleIncomingWhatsAppMessage(message) {
     }
 
     if (HELP_PATTERN.test(messageText)) {
-      const replyText = preferences.receiveSupportMessages
-        ? buildHelpMessage()
-        : buildSupportPreferenceMessage();
-
       await replyAndPersistSession({
         contact,
         messageId: message?.id || null,
@@ -859,7 +829,7 @@ export async function handleIncomingWhatsAppMessage(message) {
         currentStep: null,
         pendingQuestion: null,
         slotState: {},
-        replyText,
+        replyText: buildHelpMessage(),
         closeSessionAfterReply: true,
         client,
       });
@@ -922,10 +892,6 @@ export async function handleIncomingWhatsAppMessage(message) {
     );
 
     if (normalizedIntent.intent === "help" || normalizedIntent.intent === "unknown") {
-      const replyText = preferences.receiveSupportMessages
-        ? buildHelpMessage()
-        : buildSupportPreferenceMessage();
-
       await replyAndPersistSession({
         contact,
         messageId: message?.id || null,
@@ -935,27 +901,7 @@ export async function handleIncomingWhatsAppMessage(message) {
         currentStep: null,
         pendingQuestion: null,
         slotState: {},
-        replyText,
-        closeSessionAfterReply: true,
-        client,
-      });
-      return true;
-    }
-
-    if (
-      TRANSACTIONAL_INTENTS.has(normalizedIntent.intent) &&
-      !preferences.receiveTransactionalMessages
-    ) {
-      await replyAndPersistSession({
-        contact,
-        messageId: message?.id || null,
-        inboundAt,
-        session,
-        currentIntent: null,
-        currentStep: null,
-        pendingQuestion: null,
-        slotState: {},
-        replyText: buildTransactionalPreferenceMessage(),
+        replyText: buildHelpMessage(),
         closeSessionAfterReply: true,
         client,
       });

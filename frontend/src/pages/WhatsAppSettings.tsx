@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { CheckCircle2, Loader2, MessageCircle, ShieldCheck, Smartphone } from "lucide-react";
+import { CheckCircle2, Loader2, MessageCircle, Smartphone } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { apiService } from "@/services/api";
 import type { WhatsAppProfile, WhatsAppVerificationStatus } from "@/types/whatsapp";
 
@@ -20,15 +19,20 @@ function getVerificationBadge(status: WhatsAppVerificationStatus) {
   return <Badge variant="outline">Verificacao pendente</Badge>;
 }
 
+function buildWhatsAppChatUrl(phoneNumber?: string | null) {
+  const digits = String(phoneNumber || "").replace(/\D/g, "");
+
+  if (!digits) {
+    return null;
+  }
+
+  return `https://wa.me/${digits}`;
+}
+
 export default function WhatsAppSettings() {
   const [profile, setProfile] = useState<WhatsAppProfile | null>(null);
+  const [kipBusinessPhoneNumber, setKipBusinessPhoneNumber] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [optedIn, setOptedIn] = useState(false);
-  const [optInSource, setOptInSource] = useState("app_profile");
-  const [receiveSupportMessages, setReceiveSupportMessages] = useState(true);
-  const [receiveTransactionalMessages, setReceiveTransactionalMessages] = useState(true);
-  const [receiveWeeklySummary, setReceiveWeeklySummary] = useState(false);
-  const [receiveBudgetAlerts, setReceiveBudgetAlerts] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -47,16 +51,9 @@ export default function WhatsAppSettings() {
         }
 
         const loadedProfile = response.profile as WhatsAppProfile;
+        setKipBusinessPhoneNumber(response.kip_business_phone_number || null);
         setProfile(loadedProfile);
         setPhoneNumber(loadedProfile.phone_number || "");
-        setOptedIn(Boolean(loadedProfile.opted_in));
-        setOptInSource(loadedProfile.opt_in_source || "app_profile");
-        setReceiveSupportMessages(loadedProfile.receive_support_messages ?? true);
-        setReceiveTransactionalMessages(
-          loadedProfile.receive_transactional_messages ?? true,
-        );
-        setReceiveWeeklySummary(loadedProfile.receive_weekly_summary ?? false);
-        setReceiveBudgetAlerts(loadedProfile.receive_budget_alerts ?? false);
       } catch (error) {
         if (!mounted) {
           return;
@@ -87,34 +84,19 @@ export default function WhatsAppSettings() {
     setSuccessMessage(null);
 
     const trimmedPhone = phoneNumber.trim();
-    const trimmedSource = optInSource.trim();
-
-    if (optedIn && !trimmedPhone) {
-      setErrorMessage("Informe um numero de WhatsApp valido para ativar o recebimento.");
-      return;
-    }
+    const effectiveOptIn = Boolean(trimmedPhone);
 
     try {
       setIsSaving(true);
       const response = await apiService.updateWhatsAppProfile({
         ...(trimmedPhone ? { phone_number: trimmedPhone } : {}),
-        opted_in: optedIn,
-        ...(trimmedSource ? { opt_in_source: trimmedSource } : {}),
-        receive_support_messages: receiveSupportMessages,
-        receive_transactional_messages: receiveTransactionalMessages,
-        receive_weekly_summary: receiveWeeklySummary,
-        receive_budget_alerts: receiveBudgetAlerts,
+        opted_in: effectiveOptIn,
       });
 
       const updatedProfile = response.profile as WhatsAppProfile;
+      setKipBusinessPhoneNumber(response.kip_business_phone_number || null);
       setProfile(updatedProfile);
       setPhoneNumber(updatedProfile.phone_number || "");
-      setOptedIn(Boolean(updatedProfile.opted_in));
-      setOptInSource(updatedProfile.opt_in_source || trimmedSource || "app_profile");
-      setReceiveSupportMessages(updatedProfile.receive_support_messages ?? true);
-      setReceiveTransactionalMessages(updatedProfile.receive_transactional_messages ?? true);
-      setReceiveWeeklySummary(updatedProfile.receive_weekly_summary ?? false);
-      setReceiveBudgetAlerts(updatedProfile.receive_budget_alerts ?? false);
       setSuccessMessage(
         response.message || "Configuracoes de WhatsApp atualizadas com sucesso.",
       );
@@ -129,10 +111,12 @@ export default function WhatsAppSettings() {
     }
   };
 
+  const kipWhatsAppLink = buildWhatsAppChatUrl(kipBusinessPhoneNumber);
+
   return (
     <AppShell
       title="WhatsApp"
-      subtitle="Gerencie seu numero vinculado e preferencias de mensagens"
+      subtitle="Gerencie seu numero vinculado para conversar com o KIP"
     >
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
         {errorMessage ? (
@@ -158,11 +142,21 @@ export default function WhatsAppSettings() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  {getVerificationBadge(profile?.verification_status || "pending")}
-                  <Badge variant="secondary">
-                    {profile?.phone_number_e164 || "Sem numero vinculado"}
-                  </Badge>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {getVerificationBadge(profile?.verification_status || "pending")}
+                    <Badge variant="secondary">
+                      {profile?.phone_number_e164 || "Sem numero vinculado"}
+                    </Badge>
+                  </div>
+                  {kipWhatsAppLink ? (
+                    <Button asChild variant="outline" className="gap-2">
+                      <a href={kipWhatsAppLink} target="_blank" rel="noreferrer">
+                        <MessageCircle className="h-4 w-4" />
+                        Falar com o KIP no WhatsApp
+                      </a>
+                    </Button>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
@@ -171,10 +165,10 @@ export default function WhatsAppSettings() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageCircle className="h-5 w-5 text-primary" />
-                  Preferencias de mensagens
+                  Configuracao de uso
                 </CardTitle>
                 <CardDescription>
-                  Escolha quais tipos de comunicacao o KIP pode enviar no WhatsApp.
+                  Cadastre seu numero para habilitar o uso completo do KIP no WhatsApp.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -186,7 +180,7 @@ export default function WhatsAppSettings() {
                 ) : null}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
                     <div className="space-y-2">
                       <Label htmlFor="whatsapp-phone">Numero do WhatsApp</Label>
                       <Input
@@ -197,93 +191,12 @@ export default function WhatsAppSettings() {
                         disabled={isSaving}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="whatsapp-opt-in-source">Origem do opt-in</Label>
-                      <Input
-                        id="whatsapp-opt-in-source"
-                        placeholder="app_profile"
-                        value={optInSource}
-                        onChange={(event) => setOptInSource(event.target.value)}
-                        disabled={isSaving}
-                      />
-                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Ao cadastrar seu numero nesta tela, voce declara o consentimento para comunicacoes do KIP no WhatsApp.
+                    </p>
                   </div>
 
-                  <div className="rounded-2xl border border-border/60 bg-muted/30 p-4 space-y-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-foreground">Recebimento geral</p>
-                        <p className="text-sm text-muted-foreground">
-                          Habilita ou desabilita o canal de WhatsApp para sua conta.
-                        </p>
-                      </div>
-                      <Switch checked={optedIn} onCheckedChange={setOptedIn} disabled={isSaving} />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-foreground">Mensagens de suporte</p>
-                        <p className="text-sm text-muted-foreground">
-                          Fluxos de ajuda, instrucoes e orientacoes.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={receiveSupportMessages}
-                        onCheckedChange={setReceiveSupportMessages}
-                        disabled={isSaving}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-foreground">Mensagens transacionais</p>
-                        <p className="text-sm text-muted-foreground">
-                          Respostas para consultar e registrar lancamentos financeiros.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={receiveTransactionalMessages}
-                        onCheckedChange={setReceiveTransactionalMessages}
-                        disabled={isSaving}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-foreground">Resumo semanal</p>
-                        <p className="text-sm text-muted-foreground">
-                          Atualizacoes periodicas sobre seu desempenho financeiro.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={receiveWeeklySummary}
-                        onCheckedChange={setReceiveWeeklySummary}
-                        disabled={isSaving}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-foreground">Alertas de orçamento</p>
-                        <p className="text-sm text-muted-foreground">
-                          Avisos quando seu consumo estiver acima do esperado.
-                        </p>
-                      </div>
-                      <Switch
-                        checked={receiveBudgetAlerts}
-                        onCheckedChange={setReceiveBudgetAlerts}
-                        disabled={isSaving}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 rounded-2xl border border-border/60 bg-background/80 p-4">
-                    <div className="flex items-start gap-3">
-                      <ShieldCheck className="mt-0.5 h-4 w-4 text-primary" />
-                      <p className="text-sm text-muted-foreground">
-                        O KIP so responde dentro da janela de 24 horas apos mensagem recebida.
-                      </p>
-                    </div>
+                  <div className="flex justify-end">
                     <Button type="submit" disabled={isSaving} className="min-w-36">
                       {isSaving ? (
                         <>

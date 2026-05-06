@@ -1,5 +1,9 @@
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
+function skipWhatsAppWebhook(req) {
+  return req.originalUrl?.startsWith("/api/whatsapp/webhook") === true;
+}
+
 // Rate limiter para rotas de autenticação (login/register)
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
@@ -26,6 +30,7 @@ export const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipWhatsAppWebhook,
 });
 
 // Rate limiter para reset de senha (mais restritivo)

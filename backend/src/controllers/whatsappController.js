@@ -257,9 +257,11 @@ export const getWhatsAppChannelStatus = async (req, res) => {
 export const getUserWhatsAppProfile = async (req, res) => {
   try {
     const profile = await getWhatsAppProfileRecord(req.user.id, pool);
+    const config = getWhatsAppConfig();
 
     return res.json({
       status: "OK",
+      kip_business_phone_number: config.businessPhoneNumber || null,
       profile: {
         phone_number: profile?.phone_number || null,
         phone_number_e164: profile?.phone_number_e164 || null,
@@ -292,6 +294,7 @@ export const upsertUserWhatsAppProfile = async (req, res) => {
   const client = await pool.connect();
 
   try {
+    const config = getWhatsAppConfig();
     const {
       phone_number,
       opted_in,
@@ -309,8 +312,11 @@ export const upsertUserWhatsAppProfile = async (req, res) => {
       ? normalizeWhatsAppPhoneNumber(phone_number)
       : existingProfile?.phone_number_e164 || null;
     const displayPhoneNumber = phone_number?.trim() || existingProfile?.phone_number || null;
+    const resolvedOptedIn = normalizedPhoneNumber ? true : Boolean(opted_in);
+    const normalizedOptInSource =
+      opt_in_source?.trim() || (resolvedOptedIn ? "self_service_profile" : null);
 
-    if (opted_in && !normalizedPhoneNumber) {
+    if (resolvedOptedIn && !normalizedPhoneNumber) {
       await client.query("ROLLBACK");
       return res.status(400).json({
         status: "ERROR",
@@ -347,8 +353,8 @@ export const upsertUserWhatsAppProfile = async (req, res) => {
         [
           displayPhoneNumber,
           normalizedPhoneNumber,
-          opted_in,
-          opt_in_source?.trim() || null,
+          resolvedOptedIn,
+          normalizedOptInSource,
           req.user.id,
         ],
       );
@@ -379,8 +385,8 @@ export const upsertUserWhatsAppProfile = async (req, res) => {
           req.user.id,
           displayPhoneNumber,
           normalizedPhoneNumber,
-          opted_in,
-          opt_in_source?.trim() || null,
+          resolvedOptedIn,
+          normalizedOptInSource,
         ],
       );
     }
@@ -420,6 +426,7 @@ export const upsertUserWhatsAppProfile = async (req, res) => {
     return res.json({
       status: "OK",
       message: "Configuracoes de WhatsApp atualizadas com sucesso.",
+      kip_business_phone_number: config.businessPhoneNumber || null,
       profile: {
         phone_number: updatedProfile?.phone_number || null,
         phone_number_e164: updatedProfile?.phone_number_e164 || null,

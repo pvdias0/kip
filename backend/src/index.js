@@ -33,6 +33,33 @@ const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:8080")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const trustProxyEnv = process.env.TRUST_PROXY?.trim();
+
+function resolveTrustProxySetting(value) {
+  if (!value) {
+    return process.env.NODE_ENV === "production" ? 1 : false;
+  }
+
+  const normalizedValue = value.toLowerCase();
+
+  if (normalizedValue === "true") {
+    return true;
+  }
+
+  if (normalizedValue === "false") {
+    return false;
+  }
+
+  const numericValue = Number.parseInt(value, 10);
+
+  if (Number.isInteger(numericValue) && numericValue >= 0) {
+    return numericValue;
+  }
+
+  return value;
+}
+
+const trustProxySetting = resolveTrustProxySetting(trustProxyEnv);
 
 console.log("Port configured:", PORT);
 console.log("DB config:", {
@@ -41,8 +68,10 @@ console.log("DB config:", {
   database: process.env.DB_NAME,
   user: process.env.DB_USER,
 });
+console.log("Trust proxy:", trustProxySetting);
 
 initializeSocket(httpServer);
+app.set("trust proxy", trustProxySetting);
 
 app.use(
   helmet({
