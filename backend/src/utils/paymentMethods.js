@@ -17,11 +17,13 @@ export async function ensureDefaultPaymentMethodsForUser(
     await client.query(
       `
         INSERT INTO payment_methods (user_id, name, accounts_enabled, is_default)
-        SELECT $1, $2, $3, TRUE
+        SELECT $1, $2::VARCHAR(80), $3, TRUE
         WHERE NOT EXISTS (
           SELECT 1
           FROM payment_methods
-          WHERE user_id = $1 AND LOWER(name) = LOWER($2) AND deleted_at IS NULL
+          WHERE user_id = $1
+            AND LOWER(name) = LOWER($2::VARCHAR(80))
+            AND deleted_at IS NULL
         )
       `,
       [userId, method.name, method.accountsEnabled],
