@@ -21,17 +21,17 @@ services:
     restart: unless-stopped
 
   db-migrate:
-    build:
-      context: .
-      dockerfile: database/Dockerfile.migrate
+    image: kip-app:latest
     env_file:
       - .env
+    command: ["npm", "run", "migrate"]
     depends_on:
       db:
         condition: service_healthy
     restart: "no"
 
   app:
+    image: kip-app:latest
     build:
       context: .
       dockerfile: backend/Dockerfile
