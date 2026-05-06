@@ -20,7 +20,7 @@ export const getAllUsers = async (req, res) => {
     }
 
     const result = await pool.query(
-      "SELECT id, username, is_admin, created_at FROM users ORDER BY created_at DESC",
+      "SELECT id, name, email, email_verified, is_admin, created_at FROM users ORDER BY created_at DESC",
     );
 
     res.json({

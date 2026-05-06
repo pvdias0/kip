@@ -523,20 +523,20 @@ const Landing = () => {
                 </h4>
                 <ul className="space-y-2 text-xs sm:text-sm">
                   <li>
-                    <a
-                      href="#"
+                    <Link
+                      to="/privacy-policy"
                       className="text-muted-foreground hover:text-foreground transition-colors"
                     >
                       Privacidade
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a
-                      href="#"
+                    <Link
+                      to="/terms-of-service"
                       className="text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      Termos de Uso
-                    </a>
+                      Termos de Servico
+                    </Link>
                   </li>
                 </ul>
               </div>

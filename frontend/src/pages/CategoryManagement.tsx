@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useCategories } from "@/hooks/useCategories";
+import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,14 +24,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Trash2,
   Plus,
-  ArrowLeft,
   AlertCircle,
   CheckCircle2,
   Loader2,
 } from "lucide-react";
 
 export default function CategoryManagement() {
-  const navigate = useNavigate();
   const { categories, addCategory, removeCategory, isLoading, error } =
     useCategories();
   const [newCategoryName, setNewCategoryName] = useState("");
@@ -82,27 +80,12 @@ export default function CategoryManagement() {
   const userCategories = categories.filter((c) => c.user_id !== null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted to-background flex flex-col">
-      <div className="max-w-2xl mx-auto px-3 sm:px-4 py-6 sm:py-8 w-full flex-1">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              className="rounded-full h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-3xl font-bold truncate">Categorias</h1>
-              <p className="text-xs sm:text-base text-muted-foreground truncate">
-                Gerencie suas categorias de transações
-              </p>
-            </div>
-          </div>
-        </div>
+    <AppShell
+      title="Categorias"
+      subtitle="Gerencie suas categorias de transacoes"
+    >
+      <div className="mx-auto flex w-full max-w-2xl flex-1 px-3 py-6 sm:px-4 sm:py-8">
+        <div className="w-full">
 
         {/* Messages */}
         {successMessage && (
@@ -333,7 +316,8 @@ export default function CategoryManagement() {
             )}
           </>
         )}
+        </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

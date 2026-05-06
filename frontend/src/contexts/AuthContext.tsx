@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { User } from "@/types/auth";
 import { apiService } from "@/services/api";
 
@@ -6,8 +6,19 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
-  register: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+    legalAcceptance: {
+      termsAccepted: boolean;
+      privacyAccepted: boolean;
+      termsVersion: string;
+      privacyVersion: string;
+    },
+  ) => Promise<void>;
+  setUserData: (user: User | null) => void;
   logout: () => void;
   isLoading: boolean;
   error: string | null;
@@ -21,32 +32,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const setUserData = useCallback((userData: User | null) => {
+    setUser(userData);
+
+    if (userData) {
+      localStorage.setItem("auth_user", JSON.stringify(userData));
+    } else {
+      localStorage.removeItem("auth_user");
+    }
+  }, []);
+
+  const clearSession = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setError(null);
+    apiService.setToken(null);
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("auth_user");
+  }, []);
+
   // Load token from localStorage on mount
   useEffect(() => {
     const savedToken = localStorage.getItem("auth_token");
-    const savedUser = localStorage.getItem("auth_user");
+    const loadProfile = async () => {
+      if (!savedToken) {
+        setIsLoading(false);
+        return;
+      }
 
-    if (savedToken && savedUser) {
       try {
         setToken(savedToken);
-        setUser(JSON.parse(savedUser));
         apiService.setToken(savedToken);
+        const response = await apiService.getProfile();
+        setUserData(response.user as User);
       } catch (err) {
         console.error("Failed to load auth data:", err);
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("auth_user");
+        clearSession();
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
 
-    setIsLoading(false);
-  }, []);
+    loadProfile();
+  }, [clearSession, setUserData]);
 
-  const login = async (username: string, password: string) => {
+  const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await apiService.login(username, password);
+      const response = await apiService.login(email, password);
       console.log("Login response:", response);
 
       const { user: userData, token: newToken } = response;
@@ -55,11 +90,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Resposta inválida do servidor");
       }
 
-      setUser(userData as User);
+      setUserData(userData as User);
       setToken(newToken as string);
       apiService.setToken(newToken);
       localStorage.setItem("auth_token", newToken);
-      localStorage.setItem("auth_user", JSON.stringify(userData));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Erro ao fazer login";
@@ -70,20 +104,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (username: string, password: string) => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    legalAcceptance: {
+      termsAccepted: boolean;
+      privacyAccepted: boolean;
+      termsVersion: string;
+      privacyVersion: string;
+    },
+  ) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await apiService.register(username, password);
-
-      const { user: userData, token: newToken } = response;
-
-      setUser(userData);
-      setToken(newToken);
-      apiService.setToken(newToken);
-      localStorage.setItem("auth_token", newToken);
-      localStorage.setItem("auth_user", JSON.stringify(userData));
+      await apiService.register(name, email, password, legalAcceptance);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Erro ao criar conta";
@@ -95,12 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    setUser(null);
-    setToken(null);
-    setError(null);
-    apiService.setToken(null);
-    localStorage.removeItem("auth_token");
-    localStorage.removeItem("auth_user");
+    clearSession();
   };
 
   const value: AuthContextType = {
@@ -109,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAuthenticated: !!token,
     login,
     register,
+    setUserData,
     logout,
     isLoading,
     error,

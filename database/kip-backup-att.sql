@@ -68,8 +68,15 @@ ALTER SEQUENCE public.entries_id_seq OWNED BY public.entries.id;
 --
 CREATE TABLE public.users (
     id integer NOT NULL,
-    username character varying(50) NOT NULL,
+    email character varying(255) NOT NULL,
+    name character varying(100) NOT NULL,
     password_hash character varying(255) NOT NULL,
+    email_verified boolean DEFAULT false NOT NULL,
+    email_verification_token character varying(64),
+    email_verification_expires timestamp without time zone,
+    reset_token character varying(64),
+    reset_token_expires timestamp without time zone,
+    is_admin boolean DEFAULT false NOT NULL,
     created_at timestamp without time zone DEFAULT now()
 );
 --
@@ -111,9 +118,9 @@ COPY public.entries (id, user_id, category_id, type, amount, description, date, 
 \.
 --
 --
-COPY public.users (id, username, password_hash, created_at) FROM stdin;
-1	p.vitordias@outlook.com	$2b$10$ki2Z2jGHugDeDVPeZwFcwOKiimov/d5HI.HdUXEZ0TQq73uEXDjSa	2026-01-29 18:12:11.33008
-2	mclarasantos2905@gmail.com	$2b$10$R2FVv3YlY.aOnxofWZnLHuycRg4J8ig9nkAr6yxBB5ihs0ncIm.YW	2026-03-05 08:34:33.872313
+COPY public.users (id, email, name, password_hash, email_verified, email_verification_token, email_verification_expires, reset_token, reset_token_expires, is_admin, created_at) FROM stdin;
+1	p.vitordias@outlook.com	p.vitordias	$2b$10$ki2Z2jGHugDeDVPeZwFcwOKiimov/d5HI.HdUXEZ0TQq73uEXDjSa	t	\N	\N	\N	\N	f	2026-01-29 18:12:11.33008
+2	mclarasantos2905@gmail.com	mclarasantos2905	$2b$10$R2FVv3YlY.aOnxofWZnLHuycRg4J8ig9nkAr6yxBB5ihs0ncIm.YW	t	\N	\N	\N	\N	f	2026-03-05 08:34:33.872313
 \.
 --
 --
@@ -143,7 +150,7 @@ ALTER TABLE ONLY public.users
 --
 --
 ALTER TABLE ONLY public.users
-    ADD CONSTRAINT users_username_key UNIQUE (username);
+    ADD CONSTRAINT users_email_key UNIQUE (email);
 --
 --
 ALTER TABLE ONLY public.categories

@@ -7,7 +7,10 @@ import {
   deleteEntry,
   getStats,
 } from '../controllers/entryController.js';
-import { authMiddleware } from '../middleware/auth.js';
+import {
+  authMiddleware,
+  requireAcceptedLegalDocuments,
+} from "../middleware/auth.js";
 import {
   createEntryValidation,
   getEntriesValidation,
@@ -20,6 +23,7 @@ const router = express.Router();
 
 // All routes require authentication
 router.use(authMiddleware);
+router.use(requireAcceptedLegalDocuments);
 
 router.post('/', createEntryValidation, validate, createEntry);
 router.get('/', getEntriesValidation, validate, getEntries);

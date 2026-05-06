@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
+import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +18,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  ArrowLeft,
   AlertCircle,
   CheckCircle2,
   CreditCard,
@@ -194,29 +194,12 @@ export default function PaymentMethodManagement() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/35 to-background">
-      <div className="mx-auto flex w-full max-w-6xl flex-col px-4 py-6 sm:px-6 sm:py-8">
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/")}
-              className="h-10 w-10 rounded-full"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold sm:text-3xl">
-                Formas de Pagamento
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Toque em um card para editar.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
+    <AppShell
+      title="Formas de Pagamento"
+      subtitle="Toque em um card para editar."
+    >
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8">
+        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="outline"
               onClick={() => navigate("/payment-accounts")}
@@ -289,7 +272,6 @@ export default function PaymentMethodManagement() {
               </DialogContent>
             </Dialog>
           </div>
-        </div>
 
         {successMessage ? (
           <Alert variant="success" className="mb-4">
@@ -480,6 +462,6 @@ export default function PaymentMethodManagement() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </AppShell>
   );
 }

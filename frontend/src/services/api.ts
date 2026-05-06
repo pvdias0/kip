@@ -48,17 +48,66 @@ class ApiService {
     return JSON.parse(responseText);
   }
 
-  async register(username: string, password: string) {
+  async register(
+    name: string,
+    email: string,
+    password: string,
+    legalAcceptance: {
+      termsAccepted: boolean;
+      privacyAccepted: boolean;
+      termsVersion: string;
+      privacyVersion: string;
+    },
+  ) {
     return this.request("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ name, email, password, ...legalAcceptance }),
     });
   }
 
-  async login(username: string, password: string) {
+  async login(email: string, password: string) {
     return this.request("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  async verifyEmail(token: string) {
+    const params = new URLSearchParams({ token });
+    return this.request(`/auth/verify-email?${params.toString()}`);
+  }
+
+  async getProfile() {
+    return this.request("/auth/profile");
+  }
+
+  async updateProfile(name: string, email: string) {
+    return this.request("/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify({ name, email }),
+    });
+  }
+
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+    confirmPassword: string,
+  ) {
+    return this.request("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword, confirmPassword }),
+    });
+  }
+
+  async acceptLegalDocuments(data: {
+    termsAccepted: boolean;
+    privacyAccepted: boolean;
+    termsVersion: string;
+    privacyVersion: string;
+  }) {
+    return this.request("/auth/legal-acceptance", {
+      method: "POST",
+      body: JSON.stringify(data),
     });
   }
 

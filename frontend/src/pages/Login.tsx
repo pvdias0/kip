@@ -280,6 +280,21 @@ export default function Login() {
                     Criar uma conta
                   </Button>
                 </Link>
+
+                <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                  <Link
+                    to="/terms-of-service"
+                    className="hover:text-primary hover:underline"
+                  >
+                    Termos de Servico
+                  </Link>
+                  <Link
+                    to="/privacy-policy"
+                    className="hover:text-primary hover:underline"
+                  >
+                    Politica de Privacidade
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

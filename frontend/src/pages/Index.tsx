@@ -1,55 +1,18 @@
-import { useState } from "react";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAuth } from "@/contexts/AuthContext";
 import { TransactionForm } from "@/components/TransactionForm";
 import { PeriodTabs } from "@/components/PeriodTabs";
-import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { BarChart3, CreditCard, Settings, LogOut, Menu, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence, type Variants } from "framer-motion";
-import { KipLogo } from "@/components/ui/KipLogo";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { motion, type Variants } from "framer-motion";
+import { AppShell } from "@/components/app/AppShell";
 
 const Index = () => {
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { addTransaction } = useTransactions({ enabled: false });
-  const { logout, user } = useAuth();
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const displayName = user?.username?.split("@")[0] || "Usuário";
+  const { user } = useAuth();
+  const displayName = user?.name || user?.email?.split("@")[0] || "Usuario";
 
   const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
-
-  const handleLogoutConfirm = () => {
-    logout();
-    setIsLogoutDialogOpen(false);
-    navigate("/login");
-  };
-
-  const headerVariants: Variants = {
-    hidden: { y: -20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.5,
-        ease: [0.25, 0.46, 0.45, 0.94] as const,
-      },
-    },
-  };
 
   const mainVariants: Variants = {
     hidden: { opacity: 0, y: 20 },
@@ -65,168 +28,14 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <motion.header
-        className="header-blur sticky top-0 z-50"
-        variants={headerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="container-app py-3 sm:py-4">
-          <div className="flex items-center justify-between gap-3">
-            {/* Logo & Date */}
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <KipLogo size="sm" showText={false} />
-              <div className="min-w-0">
-                <h1 className="text-lg sm:text-xl font-display font-bold text-foreground truncate">
-                  {displayName}
-                </h1>
-                <p className="text-xs sm:text-sm text-muted-foreground capitalize truncate">
-                  {today}
-                </p>
-              </div>
-            </div>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
-              <Link to="/dashboard">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
-                >
-                  <BarChart3 className="h-4 w-4" />
-                  <span>Dashboard</span>
-                </Button>
-              </Link>
-              <Link to="/categories">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
-                >
-                  <Settings className="h-4 w-4" />
-                  <span>Categorias</span>
-                </Button>
-              </Link>
-              <Link to="/payment-methods">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="gap-2 hover:bg-primary/10 hover:text-primary transition-colors"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  <span>Pagamentos</span>
-                </Button>
-              </Link>
-              <ThemeToggle />
-              <div className="w-px h-6 bg-border mx-2" />
-              {!isMobile ? <TransactionForm onSubmit={addTransaction} /> : null}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsLogoutDialogOpen(true)}
-                title="Sair"
-                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors ml-1"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </nav>
-
-            {/* Mobile Menu Button */}
-            <div className="flex md:hidden items-center gap-2">
-              {isMobile ? <TransactionForm onSubmit={addTransaction} /> : null}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="h-9 w-9"
-              >
-                {isMobileMenuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Menu */}
-          <AnimatePresence>
-            {isMobileMenuOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="md:hidden overflow-hidden"
-              >
-                <nav className="flex flex-col gap-1 pt-4 pb-2 border-t border-border/50 mt-4">
-                  <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start gap-3 h-11">
-                      <BarChart3 className="h-5 w-5" />
-                      <span>Dashboard</span>
-                    </Button>
-                  </Link>
-                  <Link to="/categories" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start gap-3 h-11">
-                      <Settings className="h-5 w-5" />
-                      <span>Categorias</span>
-                    </Button>
-                  </Link>
-                  <Link to="/payment-methods" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start gap-3 h-11">
-                      <CreditCard className="h-5 w-5" />
-                      <span>Pagamentos</span>
-                    </Button>
-                  </Link>
-                  <ThemeToggle
-                    showLabel
-                    className="w-full justify-start gap-3 h-11 rounded-xl"
-                  />
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setIsLogoutDialogOpen(true);
-                    }}
-                    className="w-full justify-start gap-3 h-11 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <LogOut className="h-5 w-5" />
-                    <span>Sair</span>
-                  </Button>
-                </nav>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </motion.header>
-
-      {/* Logout Confirmation Dialog */}
-      <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
-        <AlertDialogContent className="sm:max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-display">Deseja sair?</AlertDialogTitle>
-            <AlertDialogDescription className="text-base">
-              Você será redirecionado para a página de login.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="flex gap-3 justify-end pt-4">
-            <AlertDialogCancel className="px-6">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleLogoutConfirm}
-              className="bg-destructive hover:bg-destructive/90 px-6"
-            >
-              Sair
-            </AlertDialogAction>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Main Content */}
+    <AppShell
+      title={displayName}
+      subtitle={today}
+      headerActions={<TransactionForm onSubmit={addTransaction} />}
+      insetClassName="bg-background"
+    >
       <motion.main
-        className="container-app py-6 sm:py-8 flex-1"
+        className="container-app flex-1 py-6 sm:py-8"
         variants={mainVariants}
         initial="hidden"
         animate="visible"
@@ -234,23 +43,22 @@ const Index = () => {
         <PeriodTabs />
       </motion.main>
 
-      {/* Footer */}
       <motion.footer
-        className="border-t border-border/50 py-6 mt-auto backdrop-blur-sm bg-background/50"
+        className="mt-auto border-t border-border/50 bg-background/50 py-6 backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
         <div className="container-app text-center">
           <p className="text-sm text-muted-foreground">
-            Organize suas finanças de forma simples e eficiente
+            Organize suas financas de forma simples e eficiente
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
+          <p className="mt-1 text-xs text-muted-foreground/60">
             © {new Date().getFullYear()} KIP • Seu organizador financeiro
           </p>
         </div>
       </motion.footer>
-    </div>
+    </AppShell>
   );
 };
 

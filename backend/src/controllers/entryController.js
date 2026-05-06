@@ -80,6 +80,20 @@ function normalizeEntry(entry) {
   };
 }
 
+async function getCategoryForUser(userId, categoryId, client = pool) {
+  const result = await client.query(
+    `
+      SELECT id, user_id, name
+      FROM categories
+      WHERE id = $1
+        AND (user_id IS NULL OR user_id = $2)
+    `,
+    [categoryId, userId],
+  );
+
+  return result.rows[0] || null;
+}
+
 async function getEntryWithRelations(userId, entryId, client = pool) {
   const result = await client.query(
     `
@@ -88,8 +102,14 @@ async function getEntryWithRelations(userId, entryId, client = pool) {
         pm.name AS payment_method_name,
         pa.name AS payment_account_name
       FROM entries e
-      LEFT JOIN payment_methods pm ON pm.id = e.payment_method_id
-      LEFT JOIN payment_accounts pa ON pa.id = e.payment_account_id
+      LEFT JOIN payment_methods pm
+        ON pm.id = e.payment_method_id
+        AND pm.user_id = e.user_id
+        AND pm.deleted_at IS NULL
+      LEFT JOIN payment_accounts pa
+        ON pa.id = e.payment_account_id
+        AND pa.user_id = e.user_id
+        AND pa.deleted_at IS NULL
       WHERE e.id = $1 AND e.user_id = $2
     `,
     [entryId, userId],
@@ -168,6 +188,24 @@ export const createEntry = async (req, res) => {
     const normalizedPaymentAccountId = payment_account_id
       ? parsePositiveInt(payment_account_id)
       : null;
+
+    if (category_id && !normalizedCategoryId) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Categoria invalida",
+      });
+    }
+
+    if (normalizedCategoryId) {
+      const category = await getCategoryForUser(userId, normalizedCategoryId, pool);
+
+      if (!category) {
+        return res.status(404).json({
+          status: "ERROR",
+          message: "Categoria nao encontrada",
+        });
+      }
+    }
 
     const paymentValidation = await validatePaymentSelection({
       userId,
@@ -265,8 +303,14 @@ export const getEntries = async (req, res) => {
         pm.name AS payment_method_name,
         pa.name AS payment_account_name
       FROM entries e
-      LEFT JOIN payment_methods pm ON pm.id = e.payment_method_id
-      LEFT JOIN payment_accounts pa ON pa.id = e.payment_account_id
+      LEFT JOIN payment_methods pm
+        ON pm.id = e.payment_method_id
+        AND pm.user_id = e.user_id
+        AND pm.deleted_at IS NULL
+      LEFT JOIN payment_accounts pa
+        ON pa.id = e.payment_account_id
+        AND pa.user_id = e.user_id
+        AND pa.deleted_at IS NULL
       WHERE e.user_id = $1
     `;
 
@@ -415,6 +459,24 @@ export const updateEntry = async (req, res) => {
       hasOwn(payload, "payment_method_id") ||
       hasOwn(payload, "payment_account_id") ||
       existingEntry.payment_method_id !== null;
+
+    if (hasOwn(payload, "category_id") && payload.category_id && !nextCategoryId) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Categoria invalida",
+      });
+    }
+
+    if (nextCategoryId) {
+      const category = await getCategoryForUser(userId, nextCategoryId, pool);
+
+      if (!category) {
+        return res.status(404).json({
+          status: "ERROR",
+          message: "Categoria nao encontrada",
+        });
+      }
+    }
 
     let normalizedPaymentAccountId = nextPaymentAccountId;
 

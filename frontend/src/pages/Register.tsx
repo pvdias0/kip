@@ -11,11 +11,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Mail, Lock, AlertCircle, Loader2, Eye, EyeOff, CheckCircle2, Sparkles, Target, PiggyBank } from "lucide-react";
+import { Mail, Lock, User, AlertCircle, Loader2, Eye, EyeOff, CheckCircle2, Sparkles, Target, PiggyBank } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { motion, type Variants } from "framer-motion";
 import { KipLogo } from "@/components/ui/KipLogo";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { LegalConsentFields } from "@/components/legal/LegalConsentFields";
+import {
+  PRIVACY_POLICY_VERSION,
+  TERMS_OF_SERVICE_VERSION,
+} from "@/legal/legalContent";
 
 const benefits = [
   { icon: Target, text: "Metas financeiras claras" },
@@ -26,20 +31,22 @@ const benefits = [
 export default function Register() {
   const navigate = useNavigate();
   const { register, isLoading } = useAuth();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword) {
       toast({
         variant: "destructive",
         title: "Campos obrigatorios",
-        description: "Preencha email, senha e confirmacao de senha.",
+        description: "Preencha nome, email, senha e confirmacao de senha.",
       });
       return;
     }
@@ -62,13 +69,28 @@ export default function Register() {
       return;
     }
 
+    if (!legalAccepted) {
+      toast({
+        variant: "destructive",
+        title: "Aceite obrigatorio",
+        description:
+          "Voce precisa aceitar os Termos de Servico e a Politica de Privacidade.",
+      });
+      return;
+    }
+
     try {
-      await register(email, password);
+      await register(name, email, password, {
+        termsAccepted: true,
+        privacyAccepted: true,
+        termsVersion: TERMS_OF_SERVICE_VERSION,
+        privacyVersion: PRIVACY_POLICY_VERSION,
+      });
       toast({
         title: "Conta criada com sucesso",
-        description: "Voce entrou automaticamente na sua conta.",
+        description: "Enviamos um link de confirmacao para o seu email.",
       });
-      navigate("/");
+      navigate(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       console.error("Register error:", err);
       toast({
@@ -220,6 +242,24 @@ export default function Register() {
               <CardContent className="space-y-6">
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div className="space-y-2">
+                    <Label htmlFor="name" className="text-sm font-medium">
+                      Nome
+                    </Label>
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-primary pointer-events-none" />
+                      <Input
+                        id="name"
+                        type="text"
+                        placeholder="Seu nome"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="pl-12 h-12 text-base border-2 transition-all focus:border-primary/50 focus:ring-primary/20"
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium">
                       Email
                     </Label>
@@ -339,10 +379,15 @@ export default function Register() {
                     )}
                   </div>
 
+                  <LegalConsentFields
+                    accepted={legalAccepted}
+                    onAcceptedChange={setLegalAccepted}
+                  />
+
                   <Button
                     type="submit"
                     className="w-full h-12 text-base font-semibold btn-primary-glow"
-                    disabled={isLoading}
+                    disabled={isLoading || !legalAccepted}
                     size="lg"
                   >
                     {isLoading ? (
@@ -387,7 +432,7 @@ export default function Register() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            Ao criar uma conta, você concorda com nossos termos de uso
+            O acesso ao sistema so e liberado apos o aceite dos documentos legais.
           </motion.p>
         </div>
       </motion.div>

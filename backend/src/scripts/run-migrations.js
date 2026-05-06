@@ -67,7 +67,6 @@ export async function runMigrations() {
       port: process.env.DB_PORT || 5432,
       database: process.env.DB_NAME || "kip",
       user: process.env.DB_USER || "postgres",
-      password: process.env.DB_PASSWORD || "postgres",
     });
     console.log("🗃️  Running database migrations...");
     await client.query("SELECT pg_advisory_lock($1)", [advisoryLockKey]);

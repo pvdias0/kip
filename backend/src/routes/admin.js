@@ -3,12 +3,16 @@ import {
   getAllUsers,
   resetUserPassword,
 } from "../controllers/adminController.js";
-import { authMiddleware } from "../middleware/auth.js";
+import {
+  authMiddleware,
+  requireAcceptedLegalDocuments,
+} from "../middleware/auth.js";
 
 const router = express.Router();
 
 // Proteger todas as rotas de admin
 router.use(authMiddleware);
+router.use(requireAcceptedLegalDocuments);
 
 // Get all users
 router.get("/users", getAllUsers);

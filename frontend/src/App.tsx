@@ -11,9 +11,13 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
+import Profile from "./pages/Profile";
 import CategoryManagement from "./pages/CategoryManagement";
 import PaymentMethodManagement from "./pages/PaymentMethodManagement";
 import PaymentAccountManagement from "./pages/PaymentAccountManagement";
+import LegalConsent from "./pages/LegalConsent";
+import LegalDocumentPage from "./pages/LegalDocumentPage";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
@@ -21,7 +25,7 @@ const queryClient = new QueryClient();
 
 // Protected route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -38,12 +42,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
+  if (!user?.has_accepted_legal_documents) {
+    return <Navigate to="/legal/consent" replace />;
+  }
+
   return <>{children}</>;
 }
 
 // Route for authenticated users (redirects to home if already logged in)
 function AuthRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -57,7 +65,12 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return (
+      <Navigate
+        to={user?.has_accepted_legal_documents ? "/" : "/legal/consent"}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;
@@ -65,7 +78,7 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
 
 // Route for landing page (shows dashboard if authenticated, landing page otherwise)
 function HomeRoute() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -79,10 +92,38 @@ function HomeRoute() {
   }
 
   if (isAuthenticated) {
+    if (!user?.has_accepted_legal_documents) {
+      return <Navigate to="/legal/consent" replace />;
+    }
     return <Index />;
   }
 
   return <Landing />;
+}
+
+function LegalConsentRoute() {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (user?.has_accepted_legal_documents) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <LegalConsent />;
 }
 
 function AppRoutes() {
@@ -105,8 +146,26 @@ function AppRoutes() {
           </AuthRoute>
         }
       />
+      <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route
+        path="/privacy-policy"
+        element={<LegalDocumentPage documentType="privacy" />}
+      />
+      <Route
+        path="/terms-of-service"
+        element={<LegalDocumentPage documentType="terms" />}
+      />
+      <Route path="/legal/consent" element={<LegalConsentRoute />} />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={

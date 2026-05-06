@@ -15,7 +15,7 @@ export const forgotPassword = async (req, res) => {
     }
 
     // Check if user exists
-    const userResult = await pool.query("SELECT id FROM users WHERE username = $1", [
+    const userResult = await pool.query("SELECT id FROM users WHERE email = $1", [
       email,
     ]);
 

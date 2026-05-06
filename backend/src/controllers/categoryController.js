@@ -132,6 +132,7 @@ export const deleteCategory = async (req, res) => {
 // Get categories by type
 export const getCategoriesByType = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { type } = req.params;
 
     if (!["income", "expense"].includes(type)) {
@@ -141,7 +142,15 @@ export const getCategoriesByType = async (req, res) => {
       });
     }
 
-    const result = await pool.query("SELECT * FROM categories ORDER BY name");
+    const result = await pool.query(
+      `
+        SELECT *
+        FROM categories
+        WHERE user_id IS NULL OR user_id = $1
+        ORDER BY name
+      `,
+      [userId],
+    );
 
     res.json({
       status: "OK",

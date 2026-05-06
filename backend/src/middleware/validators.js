@@ -1,4 +1,8 @@
 import { body, param, query, validationResult } from "express-validator";
+import {
+  PRIVACY_POLICY_VERSION,
+  TERMS_OF_SERVICE_VERSION,
+} from "../config/legal.js";
 
 export const validate = (req, res, next) => {
   const errors = validationResult(req);
@@ -18,7 +22,7 @@ export const validate = (req, res, next) => {
 };
 
 export const loginValidation = [
-  body("username")
+  body("email")
     .trim()
     .isEmail()
     .withMessage("Email invalido")
@@ -31,7 +35,11 @@ export const loginValidation = [
 ];
 
 export const registerValidation = [
-  body("username")
+  body("name")
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Nome deve ter entre 2 e 100 caracteres"),
+  body("email")
     .trim()
     .isEmail()
     .withMessage("Email invalido")
@@ -43,6 +51,61 @@ export const registerValidation = [
     .withMessage("Senha deve ter entre 6 e 128 caracteres")
     .matches(/^(?=.*[a-z])(?=.*[A-Z])|(?=.*\d)/)
     .withMessage("Senha muito fraca. Use letras maiusculas, minusculas ou numeros"),
+  body("termsAccepted")
+    .custom((value) => value === true)
+    .withMessage("O aceite dos Termos de Servico e obrigatorio"),
+  body("privacyAccepted")
+    .custom((value) => value === true)
+    .withMessage("O aceite da Politica de Privacidade e obrigatorio"),
+  body("termsVersion")
+    .equals(TERMS_OF_SERVICE_VERSION)
+    .withMessage("Versao dos Termos de Servico invalida"),
+  body("privacyVersion")
+    .equals(PRIVACY_POLICY_VERSION)
+    .withMessage("Versao da Politica de Privacidade invalida"),
+];
+
+export const profileUpdateValidation = [
+  body("name")
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage("Nome deve ter entre 2 e 100 caracteres"),
+  body("email")
+    .trim()
+    .isEmail()
+    .withMessage("Email invalido")
+    .normalizeEmail()
+    .isLength({ max: 255 })
+    .withMessage("Email muito longo"),
+];
+
+export const changePasswordValidation = [
+  body("currentPassword")
+    .isLength({ min: 6, max: 128 })
+    .withMessage("Senha atual invalida"),
+  body("newPassword")
+    .isLength({ min: 6, max: 128 })
+    .withMessage("A nova senha deve ter entre 6 e 128 caracteres")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])|(?=.*\d)/)
+    .withMessage("Senha muito fraca. Use letras maiusculas, minusculas ou numeros"),
+  body("confirmPassword")
+    .custom((value, { req }) => value === req.body.newPassword)
+    .withMessage("As senhas nao conferem"),
+];
+
+export const legalAcceptanceValidation = [
+  body("termsAccepted")
+    .custom((value) => value === true)
+    .withMessage("O aceite dos Termos de Servico e obrigatorio"),
+  body("privacyAccepted")
+    .custom((value) => value === true)
+    .withMessage("O aceite da Politica de Privacidade e obrigatorio"),
+  body("termsVersion")
+    .equals(TERMS_OF_SERVICE_VERSION)
+    .withMessage("Versao dos Termos de Servico invalida"),
+  body("privacyVersion")
+    .equals(PRIVACY_POLICY_VERSION)
+    .withMessage("Versao da Politica de Privacidade invalida"),
 ];
 
 export const createEntryValidation = [

@@ -10,11 +10,15 @@ import {
   linkPaymentAccount,
   unlinkPaymentAccount,
 } from "../controllers/paymentMethodController.js";
-import { authMiddleware } from "../middleware/auth.js";
+import {
+  authMiddleware,
+  requireAcceptedLegalDocuments,
+} from "../middleware/auth.js";
 
 const router = express.Router();
 
 router.use(authMiddleware);
+router.use(requireAcceptedLegalDocuments);
 
 router.get("/", getPaymentMethods);
 router.post("/", createPaymentMethod);
