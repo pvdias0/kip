@@ -23,6 +23,7 @@ import { TransactionInput, TransactionType } from "@/types/finance";
 import { useCategories } from "@/hooks/useCategories";
 import { usePaymentMethods } from "@/hooks/usePaymentMethods";
 import { toast } from "@/components/ui/use-toast";
+import { format } from "date-fns";
 import {
   clearPendingTransactionAccountId,
   clearTransactionDraft,
@@ -48,7 +49,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface TransactionFormProps {
-  onSubmit: (transaction: TransactionInput) => void;
+  onSubmit: (transaction: TransactionInput) => Promise<void> | void;
 }
 
 const NO_CATEGORY_VALUE = "__no_category__";
@@ -57,6 +58,10 @@ const NO_PAYMENT_METHOD_VALUE = "__no_payment_method__";
 const NO_PAYMENT_ACCOUNT_VALUE = "__no_payment_account__";
 const CREATE_PAYMENT_ACCOUNT_VALUE = "__create_payment_account__";
 const LINK_PAYMENT_ACCOUNT_VALUE = "__link_payment_account__";
+
+function getLocalDateInputValue() {
+  return format(new Date(), "yyyy-MM-dd");
+}
 
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const navigate = useNavigate();
@@ -71,7 +76,8 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [isSavingCategory, setIsSavingCategory] = useState(false);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [date, setDate] = useState(getLocalDateInputValue());
   const { categories, addCategory } = useCategories();
   const { paymentMethods } = usePaymentMethods();
 
@@ -144,13 +150,17 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     setNewCategoryName("");
     setIsCreatingCategory(false);
     setIsSavingCategory(false);
-    setDate(new Date().toISOString().split("T")[0]);
+    setDate(getLocalDateInputValue());
     clearTransactionDraft();
     clearTransactionReturnContext();
     clearPendingTransactionAccountId();
   };
 
   const handleDialogChange = (nextOpen: boolean) => {
+    if (isSubmitting) {
+      return;
+    }
+
     setOpen(nextOpen);
 
     if (!nextOpen) {
@@ -191,8 +201,12 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     navigate("/payment-accounts");
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
 
     if (!amount || !description) {
       return;
@@ -217,20 +231,33 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       return;
     }
 
-    onSubmit({
-      type,
-      amount: parseFloat(amount),
-      description,
-      category_id: categoryId ? parseInt(categoryId, 10) : undefined,
-      payment_method_id: parseInt(paymentMethodId, 10),
-      payment_account_id: paymentAccountId
-        ? parseInt(paymentAccountId, 10)
-        : undefined,
-      date,
-    });
+    try {
+      setIsSubmitting(true);
 
-    resetForm();
-    setOpen(false);
+      await onSubmit({
+        type,
+        amount: parseFloat(amount),
+        description,
+        category_id: categoryId ? parseInt(categoryId, 10) : undefined,
+        payment_method_id: parseInt(paymentMethodId, 10),
+        payment_account_id: paymentAccountId
+          ? parseInt(paymentAccountId, 10)
+          : undefined,
+        date,
+      });
+
+      resetForm();
+      setOpen(false);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Nao foi possivel salvar a transacao",
+        description:
+          err instanceof Error ? err.message : "Tente novamente em instantes.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCreateCategory = async () => {
@@ -630,7 +657,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
 
           <Button
             type="submit"
-            disabled={isSavingCategory}
+            disabled={isSavingCategory || isSubmitting}
             className={cn(
               "h-12 w-full text-base font-semibold transition-all duration-300",
               type === "income"
@@ -639,8 +666,17 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
             )}
             size="lg"
           >
-            <Plus className="mr-2 h-5 w-5" />
-            Adicionar {type === "income" ? "Ganho" : "Gasto"}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-5 w-5" />
+                Adicionar {type === "income" ? "Ganho" : "Gasto"}
+              </>
+            )}
           </Button>
         </form>
       </DialogContent>

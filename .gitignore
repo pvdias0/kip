@@ -23,6 +23,7 @@ dist/
 build/
 .next/
 out/
+graphify-out/
 
 # IDE
 .vscode/

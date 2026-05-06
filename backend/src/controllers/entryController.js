@@ -15,10 +15,45 @@ function hasOwn(obj, key) {
   return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
+function normalizeEntryDateValue(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    return value.includes("T") ? value.slice(0, 10) : value;
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  return null;
+}
+
+function sanitizeEntryDate(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmedValue)) {
+    return null;
+  }
+
+  const parsedDate = new Date(`${trimmedValue}T00:00:00`);
+
+  return Number.isNaN(parsedDate.getTime()) ? null : trimmedValue;
+}
+
 function normalizeEntry(entry) {
+  const normalizedDate = normalizeEntryDateValue(entry.date);
+
   return {
     ...entry,
     amount: parseFloat(entry.amount),
+    date: normalizedDate ?? entry.date,
   };
 }
 
@@ -96,6 +131,15 @@ export const createEntry = async (req, res) => {
       });
     }
 
+    const normalizedDate = sanitizeEntryDate(date);
+
+    if (!normalizedDate) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Data invalida. Use o formato YYYY-MM-DD",
+      });
+    }
+
     const normalizedCategoryId = category_id ? parsePositiveInt(category_id) : null;
     const normalizedPaymentMethodId = parsePositiveInt(payment_method_id);
     const normalizedPaymentAccountId = payment_account_id
@@ -139,7 +183,7 @@ export const createEntry = async (req, res) => {
         type,
         amount,
         description,
-        date,
+        normalizedDate,
       ],
     );
 
@@ -255,6 +299,19 @@ export const updateEntry = async (req, res) => {
         status: "ERROR",
         message: 'Tipo inválido. Deve ser "income" ou "expense"',
       });
+    }
+
+    if (hasOwn(payload, "date")) {
+      const normalizedPayloadDate = sanitizeEntryDate(payload.date);
+
+      if (!normalizedPayloadDate) {
+        return res.status(400).json({
+          status: "ERROR",
+          message: "Data invalida. Use o formato YYYY-MM-DD",
+        });
+      }
+
+      payload.date = normalizedPayloadDate;
     }
 
     const nextCategoryId = hasOwn(payload, "category_id")
