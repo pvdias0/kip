@@ -115,8 +115,19 @@ export const verifyWhatsAppWebhook = async (req, res) => {
 
 export const receiveWhatsAppWebhook = async (req, res) => {
   const config = getWhatsAppConfig();
+  const inboundMessages = extractInboundWhatsAppMessages(req.body);
+
+  console.log("[WhatsApp webhook] POST received", {
+    ip: req.ip,
+    object: req.body?.object || null,
+    entries: Array.isArray(req.body?.entry) ? req.body.entry.length : 0,
+    inboundMessages: inboundMessages.length,
+  });
 
   if (!config.appSecret) {
+    console.error(
+      "[WhatsApp webhook] rejected: missing WHATSAPP_APP_SECRET",
+    );
     return res.status(503).json({
       status: "ERROR",
       message: "Webhook do WhatsApp indisponivel por configuracao incompleta",
@@ -124,6 +135,11 @@ export const receiveWhatsAppWebhook = async (req, res) => {
   }
 
   if (!isValidWebhookSignature(req, config.appSecret)) {
+    console.error("[WhatsApp webhook] rejected: invalid signature", {
+      hasRawBody: Boolean(req.rawBody),
+      signatureHeaderPresent: Boolean(req.get("x-hub-signature-256")),
+      appSecretPresent: Boolean(config.appSecret),
+    });
     return res.status(401).json({
       status: "ERROR",
       message: "Assinatura do webhook invalida",
@@ -132,7 +148,6 @@ export const receiveWhatsAppWebhook = async (req, res) => {
 
   try {
     const summary = await processWhatsAppWebhookPayload(req.body, pool);
-    const inboundMessages = extractInboundWhatsAppMessages(req.body);
     const assistantQueue = [];
 
     for (const message of inboundMessages) {
@@ -147,6 +162,11 @@ export const receiveWhatsAppWebhook = async (req, res) => {
 
       if (claimed) {
         assistantQueue.push(message);
+      } else {
+        console.log("[WhatsApp webhook] inbound message skipped", {
+          messageId,
+          reason: "already_processing_or_processed",
+        });
       }
     }
 
@@ -187,6 +207,13 @@ export const receiveWhatsAppWebhook = async (req, res) => {
         });
       });
     }
+
+    console.log("[WhatsApp webhook] processed", {
+      storedEvents: summary.storedEvents,
+      processedMessages: summary.processedMessages,
+      processedStatuses: summary.processedStatuses,
+      queuedAssistantMessages: assistantQueue.length,
+    });
 
     return res.status(200).json({
       status: "OK",
