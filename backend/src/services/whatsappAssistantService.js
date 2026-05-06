@@ -737,6 +737,10 @@ export async function handleIncomingWhatsAppMessage(message) {
     const contact = await getWhatsAppContactByPhoneNumber(normalizedPhoneNumber, client);
 
     if (!contact) {
+      console.error("WhatsApp assistant contact lookup failed", {
+        inboundPhoneNumber: normalizedPhoneNumber,
+        messageId: message?.id || null,
+      });
       await sendWhatsAppTextMessage({
         to: normalizedPhoneNumber,
         body: "Nao encontrei nenhuma conta do KIP vinculada a este numero. Cadastre seu WhatsApp no seu perfil do app para continuar.",

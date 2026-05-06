@@ -31,14 +31,30 @@ function addHours(date, hours) {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
 
-export function normalizeWhatsAppPhoneNumber(input) {
-  const digits = String(input ?? "").replace(/\D/g, "");
+function normalizePhoneDigits(input) {
+  return String(input ?? "").replace(/\D/g, "");
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function buildWhatsAppPhoneNumberCandidates(input) {
+  const digits = normalizePhoneDigits(input);
 
   if (digits.length < 10 || digits.length > 15) {
-    return null;
+    return [];
   }
 
-  return `+${digits}`;
+  if (digits.length <= 11 && !digits.startsWith("55")) {
+    return uniqueValues([`+55${digits}`, `+${digits}`]);
+  }
+
+  return [`+${digits}`];
+}
+
+export function normalizeWhatsAppPhoneNumber(input) {
+  return buildWhatsAppPhoneNumberCandidates(input)[0] || null;
 }
 
 export async function syncWhatsAppChannelConfig(client = pool) {
@@ -87,14 +103,37 @@ async function findContactByPhoneNumber(phoneNumberE164, client = pool) {
     return null;
   }
 
+  const e164Candidates = buildWhatsAppPhoneNumberCandidates(phoneNumberE164);
+  const digitCandidates = uniqueValues(
+    e164Candidates.map((value) => normalizePhoneDigits(value)),
+  );
+
+  if (e164Candidates.length === 0 || digitCandidates.length === 0) {
+    return null;
+  }
+
   const result = await client.query(
     `
       SELECT id, user_id
       FROM user_whatsapp_contacts
-      WHERE phone_number_e164 = $1
+      WHERE phone_number_e164 = ANY($1::text[])
+        OR regexp_replace(COALESCE(phone_number_e164, ''), '\\D', '', 'g') = ANY($2::text[])
+        OR regexp_replace(COALESCE(phone_number, ''), '\\D', '', 'g') = ANY($2::text[])
+      ORDER BY
+        CASE
+          WHEN phone_number_e164 = $3 THEN 0
+          WHEN regexp_replace(COALESCE(phone_number_e164, ''), '\\D', '', 'g') = $4 THEN 1
+          ELSE 2
+        END,
+        id
       LIMIT 1
     `,
-    [phoneNumberE164],
+    [
+      e164Candidates,
+      digitCandidates,
+      e164Candidates[0],
+      digitCandidates[0],
+    ],
   );
 
   return result.rows[0] || null;
@@ -105,6 +144,15 @@ export async function getWhatsAppContactByPhoneNumber(
   client = pool,
 ) {
   if (!phoneNumberE164) {
+    return null;
+  }
+
+  const e164Candidates = buildWhatsAppPhoneNumberCandidates(phoneNumberE164);
+  const digitCandidates = uniqueValues(
+    e164Candidates.map((value) => normalizePhoneDigits(value)),
+  );
+
+  if (e164Candidates.length === 0 || digitCandidates.length === 0) {
     return null;
   }
 
@@ -129,10 +177,24 @@ export async function getWhatsAppContactByPhoneNumber(
       FROM user_whatsapp_contacts c
       INNER JOIN users u ON u.id = c.user_id
       LEFT JOIN user_whatsapp_preferences p ON p.user_id = c.user_id
-      WHERE c.phone_number_e164 = $1
+      WHERE c.phone_number_e164 = ANY($1::text[])
+        OR regexp_replace(COALESCE(c.phone_number_e164, ''), '\\D', '', 'g') = ANY($2::text[])
+        OR regexp_replace(COALESCE(c.phone_number, ''), '\\D', '', 'g') = ANY($2::text[])
+      ORDER BY
+        CASE
+          WHEN c.phone_number_e164 = $3 THEN 0
+          WHEN regexp_replace(COALESCE(c.phone_number_e164, ''), '\\D', '', 'g') = $4 THEN 1
+          ELSE 2
+        END,
+        c.id
       LIMIT 1
     `,
-    [phoneNumberE164],
+    [
+      e164Candidates,
+      digitCandidates,
+      e164Candidates[0],
+      digitCandidates[0],
+    ],
   );
 
   return result.rows[0] || null;
@@ -326,9 +388,9 @@ export async function markIncomingMessageAssistantStatus(
     `
       UPDATE whatsapp_messages
       SET
-        status = $2,
+        status = $2::varchar,
         error_message = CASE
-          WHEN $2 = 'failed' THEN $3
+          WHEN $2::varchar = 'failed' THEN $3::text
           ELSE NULL
         END,
         updated_at = NOW()
@@ -538,12 +600,16 @@ async function saveIncomingMessage(message, changeValue, client = pool) {
       `
         UPDATE user_whatsapp_contacts
         SET
+          phone_number_e164 = COALESCE($2, phone_number_e164),
           verification_status = 'verified',
           updated_at = NOW()
         WHERE id = $1
-          AND verification_status <> 'verified'
+          AND (
+            verification_status <> 'verified'
+            OR COALESCE($2, phone_number_e164) IS DISTINCT FROM phone_number_e164
+          )
       `,
-      [linkedContact.id],
+      [linkedContact.id, normalizedPhoneNumber],
     );
   }
 }
