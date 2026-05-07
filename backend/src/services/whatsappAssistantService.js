@@ -80,6 +80,16 @@ function getLocalDateString(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function getLocalDateParts(date = new Date()) {
+  const [year, month, day] = getLocalDateString(date).split("-");
+
+  return {
+    year,
+    month,
+    day,
+  };
+}
+
 function normalizeName(value) {
   return String(value || "")
     .normalize("NFD")
@@ -255,9 +265,9 @@ function preserveConversationContext(slotState = {}) {
   };
 }
 
-function buildCommandIntent(messageText) {
+function buildCommandIntent(messageText, referenceDate = new Date()) {
   const normalized = normalizeName(messageText).replace(/\//g, "");
-  const now = new Date();
+  const now = referenceDate;
   const baseSlots = buildEmptySlots();
 
   if (normalized === "hoje") {
@@ -348,9 +358,9 @@ function parseBooleanText(text) {
   return null;
 }
 
-function parseRelativeDateText(text) {
+function parseRelativeDateText(text, referenceDate = new Date()) {
   const normalized = normalizeName(text);
-  const now = new Date();
+  const now = referenceDate;
 
   if (normalized === "hoje" || normalized === "agora") {
     return getLocalDateString(now);
@@ -374,12 +384,26 @@ function parseRelativeDateText(text) {
     return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
   }
 
+  const brShortMatch = String(text || "").trim().match(/^(\d{2})\/(\d{2})$/);
+
+  if (brShortMatch) {
+    const { year } = getLocalDateParts(referenceDate);
+    return `${year}-${brShortMatch[2]}-${brShortMatch[1]}`;
+  }
+
+  const dayOnlyMatch = String(text || "").trim().match(/^(\d{1,2})$/);
+
+  if (dayOnlyMatch) {
+    const { year, month } = getLocalDateParts(referenceDate);
+    return `${year}-${month}-${String(dayOnlyMatch[1]).padStart(2, "0")}`;
+  }
+
   return null;
 }
 
-function buildDateRangeFromPeriodText(text) {
+function buildDateRangeFromPeriodText(text, referenceDate = new Date()) {
   const normalized = normalizeName(text);
-  const now = new Date();
+  const now = referenceDate;
 
   if (!normalized) {
     return null;
@@ -412,7 +436,81 @@ function buildDateRangeFromPeriodText(text) {
     };
   }
 
+  const explicitDayMatch = String(text || "").match(
+    /\b(?:dia\s+)?(\d{1,2})(?:\/(\d{1,2})(?:\/(\d{4}))?)?\b/i,
+  );
+
+  if (explicitDayMatch) {
+    const { year: localYear, month: localMonth } = getLocalDateParts(referenceDate);
+    const day = String(explicitDayMatch[1]).padStart(2, "0");
+    const month = explicitDayMatch[2]
+      ? String(explicitDayMatch[2]).padStart(2, "0")
+      : localMonth;
+    const year = explicitDayMatch[3] ? explicitDayMatch[3] : localYear;
+    const normalizedDate = `${year}-${month}-${day}`;
+
+    return {
+      start_date: normalizedDate,
+      end_date: normalizedDate,
+      period_label: `dia ${day}/${month}`,
+    };
+  }
+
   return null;
+}
+
+function normalizeDateSlotValue(value, referenceDate = new Date()) {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    return value.trim();
+  }
+
+  return parseRelativeDateText(String(value).trim(), referenceDate);
+}
+
+function normalizeDateSlotsForIntent(intent, slots, referenceDate = new Date()) {
+  if (intent === "create_entry" || intent === "update_entry") {
+    const normalizedDate = normalizeDateSlotValue(slots.date, referenceDate);
+
+    if (normalizedDate) {
+      slots.date = normalizedDate;
+    }
+  }
+
+  if (intent === "get_entries") {
+    const normalizedStartDate = normalizeDateSlotValue(slots.start_date, referenceDate);
+    const normalizedEndDate = normalizeDateSlotValue(slots.end_date, referenceDate);
+
+    if (normalizedStartDate) {
+      slots.start_date = normalizedStartDate;
+    }
+
+    if (normalizedEndDate) {
+      slots.end_date = normalizedEndDate;
+    }
+
+    if ((!normalizedStartDate || !normalizedEndDate) && slots.period_label) {
+      const normalizedRange = buildDateRangeFromPeriodText(
+        slots.period_label,
+        referenceDate,
+      );
+
+      if (normalizedRange) {
+        slots.start_date = normalizedRange.start_date;
+        slots.end_date = normalizedRange.end_date;
+        slots.period_label = normalizedRange.period_label;
+      }
+    }
+  }
+
+  return slots;
+}
+
+function isIsoDateString(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function buildReferenceSlots(messageText) {
@@ -459,7 +557,7 @@ function extractNameAfterKeyword(messageText, keyword) {
   return match?.[1]?.trim() || null;
 }
 
-function buildHeuristicIntent(messageText, session) {
+function buildHeuristicIntent(messageText, session, referenceDate = new Date()) {
   const baseSlots = buildEmptySlots();
   const currentIntent = session?.current_intent || null;
   const currentStep = session?.current_step || null;
@@ -545,7 +643,7 @@ function buildHeuristicIntent(messageText, session) {
     }
 
     if (currentStep === "date") {
-      const parsedDate = parseRelativeDateText(messageText);
+      const parsedDate = parseRelativeDateText(messageText, referenceDate);
 
       if (parsedDate) {
         return {
@@ -592,7 +690,7 @@ function buildHeuristicIntent(messageText, session) {
     }
 
     if (currentStep === "period_label") {
-      const periodRange = buildDateRangeFromPeriodText(messageText);
+      const periodRange = buildDateRangeFromPeriodText(messageText, referenceDate);
 
       if (periodRange) {
         return {
@@ -842,7 +940,7 @@ function buildHeuristicIntent(messageText, session) {
     }
   }
 
-  const periodRange = buildDateRangeFromPeriodText(messageText);
+  const periodRange = buildDateRangeFromPeriodText(messageText, referenceDate);
 
   if (
     periodRange &&
@@ -1454,6 +1552,8 @@ async function buildValidationResult(
     }
     if (!slots.date) {
       missingFields.push("date");
+    } else if (!isIsoDateString(slots.date)) {
+      validationMessage = "📅 Nao consegui entender a data dessa transacao. Envie como DD/MM/AAAA, DD/MM ou diga hoje/ontem.";
     }
     if (!slots.payment_method_name) {
       missingFields.push("payment_method_name");
@@ -1504,6 +1604,9 @@ async function buildValidationResult(
     }
 
     if (intent === "update_entry") {
+      if (slots.date && !isIsoDateString(slots.date)) {
+        validationMessage = "📅 Nao consegui entender a nova data. Envie como DD/MM/AAAA, DD/MM ou diga hoje/ontem.";
+      }
       if (getEntryMutationFieldCount(slots) === 0) {
         validationMessage = "✏️ Me diga o que voce quer alterar nessa transacao.";
       }
@@ -1542,6 +1645,8 @@ async function buildValidationResult(
   if (intent === "get_entries") {
     if (!slots.start_date || !slots.end_date) {
       missingFields.push("period_label");
+    } else if (!isIsoDateString(slots.start_date) || !isIsoDateString(slots.end_date)) {
+      validationMessage = "📅 Nao consegui entender esse periodo. Tente algo como hoje, esta semana, 07/05 ou 07/05/2026.";
     }
   }
 
@@ -2284,8 +2389,10 @@ export async function handleIncomingWhatsAppMessage(message) {
     }
 
     const userContext = await buildUserContext(contact.user_id, client);
-    const commandIntent = buildCommandIntent(messageText);
-    const heuristicIntent = commandIntent ? null : buildHeuristicIntent(messageText, session);
+    const commandIntent = buildCommandIntent(messageText, inboundAt);
+    const heuristicIntent = commandIntent
+      ? null
+      : buildHeuristicIntent(messageText, session, inboundAt);
     const interpreted = commandIntent
       ? {
           model: "local-command-router",
@@ -2325,6 +2432,7 @@ export async function handleIncomingWhatsAppMessage(message) {
         ? preservedContext
         : session.slot_state_json || {};
     const slotState = mergeSlots(baseSlotState, normalizedIntent.slots);
+    normalizeDateSlotsForIntent(normalizedIntent.intent, slotState, inboundAt);
     const validation = await buildValidationResult(
       normalizedIntent.intent,
       slotState,
