@@ -2313,6 +2313,7 @@ export async function handleIncomingWhatsAppMessage(message) {
             slot_state_json: session.slot_state_json || {},
           },
           userContext,
+          nowDate: getLocalDateString(inboundAt),
         });
 
     const normalizedIntent = normalizeIntentResult(session, interpreted.output);

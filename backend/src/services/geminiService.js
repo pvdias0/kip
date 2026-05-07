@@ -1,4 +1,5 @@
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const BRAZIL_TIME_ZONE = "America/Fortaleza";
 
 const INTENTS = [
   "help",
@@ -83,6 +84,19 @@ const INTENT_SCHEMA = {
   required: ["intent", "confidence", "slots", "missing_fields", "notes"],
   additionalProperties: false,
 };
+
+function getLocalDateString(date = new Date()) {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BRAZIL_TIME_ZONE,
+  });
+
+  const parts = formatter.formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  return `${year}-${month}-${day}`;
+}
 
 function buildPrompt({
   messageText,
@@ -200,6 +214,7 @@ export async function interpretWhatsAppIntent({
   messageText,
   sessionState,
   userContext,
+  nowDate = null,
 }) {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
 
@@ -211,7 +226,7 @@ export async function interpretWhatsAppIntent({
     messageText,
     sessionState,
     userContext,
-    nowDate: new Date().toISOString().slice(0, 10),
+    nowDate: nowDate || getLocalDateString(),
   });
 
   const response = await fetch(
