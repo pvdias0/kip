@@ -6,6 +6,10 @@ function parsePositiveInt(value) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object, key);
+}
+
 function normalizeEntryDateValue(value) {
   if (!value) {
     return null;
@@ -188,6 +192,288 @@ export async function createEntryForUser(
   );
 
   return getEntryWithRelations(userId, result.rows[0].id, client);
+}
+
+export async function updateEntryForUser(
+  userId,
+  entryId,
+  payload,
+  client = pool,
+) {
+  const existingResult = await client.query(
+    "SELECT * FROM entries WHERE id = $1 AND user_id = $2",
+    [entryId, userId],
+  );
+
+  if (existingResult.rows.length === 0) {
+    throw new Error("Entrada nao encontrada");
+  }
+
+  const existingEntry = existingResult.rows[0];
+  const previousEntryDate = normalizeEntryDateValue(existingEntry.date);
+  const nextPayload = { ...payload };
+
+  if (hasOwn(nextPayload, "amount") && nextPayload.amount <= 0) {
+    throw new Error("Valor deve ser maior que zero");
+  }
+
+  if (
+    hasOwn(nextPayload, "type") &&
+    nextPayload.type &&
+    !["income", "expense"].includes(nextPayload.type)
+  ) {
+    throw new Error('Tipo invalido. Deve ser "income" ou "expense"');
+  }
+
+  if (hasOwn(nextPayload, "date")) {
+    const normalizedPayloadDate = sanitizeEntryDate(nextPayload.date);
+
+    if (!normalizedPayloadDate) {
+      throw new Error("Data invalida. Use o formato YYYY-MM-DD");
+    }
+
+    nextPayload.date = normalizedPayloadDate;
+  }
+
+  const nextCategoryId = hasOwn(nextPayload, "category_id")
+    ? nextPayload.category_id
+      ? parsePositiveInt(nextPayload.category_id)
+      : null
+    : existingEntry.category_id;
+
+  const nextPaymentMethodId = hasOwn(nextPayload, "payment_method_id")
+    ? nextPayload.payment_method_id
+      ? parsePositiveInt(nextPayload.payment_method_id)
+      : null
+    : existingEntry.payment_method_id;
+
+  const nextPaymentAccountId = hasOwn(nextPayload, "payment_account_id")
+    ? nextPayload.payment_account_id
+      ? parsePositiveInt(nextPayload.payment_account_id)
+      : null
+    : existingEntry.payment_account_id;
+
+  const shouldValidatePayment =
+    hasOwn(nextPayload, "payment_method_id") ||
+    hasOwn(nextPayload, "payment_account_id") ||
+    existingEntry.payment_method_id !== null;
+
+  if (
+    hasOwn(nextPayload, "category_id") &&
+    nextPayload.category_id &&
+    !nextCategoryId
+  ) {
+    throw new Error("Categoria invalida");
+  }
+
+  if (nextCategoryId) {
+    const category = await getCategoryForUser(userId, nextCategoryId, client);
+
+    if (!category) {
+      throw new Error("Categoria nao encontrada");
+    }
+  }
+
+  let normalizedPaymentAccountId = nextPaymentAccountId;
+
+  if (shouldValidatePayment) {
+    const paymentValidation = await validatePaymentSelection({
+      userId,
+      paymentMethodId: nextPaymentMethodId,
+      paymentAccountId: nextPaymentAccountId,
+      client,
+    });
+
+    if (!paymentValidation.ok) {
+      throw new Error(paymentValidation.message);
+    }
+
+    normalizedPaymentAccountId = paymentValidation.normalizedPaymentAccountId;
+  }
+
+  const result = await client.query(
+    `
+      UPDATE entries
+      SET
+        type = $1,
+        amount = $2,
+        description = $3,
+        category_id = $4,
+        payment_method_id = $5,
+        payment_account_id = $6,
+        date = $7
+      WHERE id = $8 AND user_id = $9
+      RETURNING id
+    `,
+    [
+      nextPayload.type ?? existingEntry.type,
+      nextPayload.amount ?? existingEntry.amount,
+      nextPayload.description ?? existingEntry.description,
+      nextCategoryId,
+      nextPaymentMethodId,
+      normalizedPaymentAccountId,
+      nextPayload.date ?? existingEntry.date,
+      entryId,
+      userId,
+    ],
+  );
+
+  const entry = await getEntryWithRelations(userId, result.rows[0].id, client);
+
+  return {
+    entry,
+    previousEntryDate,
+    nextEntryDate: normalizeEntryDateValue(nextPayload.date ?? existingEntry.date),
+  };
+}
+
+export async function deleteEntryForUser(userId, entryId, client = pool) {
+  const result = await client.query(
+    "DELETE FROM entries WHERE id = $1 AND user_id = $2 RETURNING id, date",
+    [entryId, userId],
+  );
+
+  if (result.rows.length === 0) {
+    throw new Error("Entrada nao encontrada");
+  }
+
+  return {
+    id: result.rows[0].id,
+    date: normalizeEntryDateValue(result.rows[0].date),
+  };
+}
+
+export async function createCategoryForUser(userId, { name }, client = pool) {
+  if (!name || !name.trim()) {
+    throw new Error("Nome da categoria e obrigatorio");
+  }
+
+  const normalizedName = name.trim();
+  const existing = await client.query(
+    `
+      SELECT id
+      FROM categories
+      WHERE user_id = $1 AND LOWER(name) = LOWER($2)
+    `,
+    [userId, normalizedName],
+  );
+
+  if (existing.rows.length > 0) {
+    throw new Error("Categoria ja existe");
+  }
+
+  const result = await client.query(
+    `
+      INSERT INTO categories (user_id, name)
+      VALUES ($1, $2)
+      RETURNING *
+    `,
+    [userId, normalizedName],
+  );
+
+  return result.rows[0];
+}
+
+export async function updateCategoryForUser(
+  userId,
+  categoryId,
+  { name },
+  client = pool,
+) {
+  const normalizedCategoryId = parsePositiveInt(categoryId);
+
+  if (!normalizedCategoryId) {
+    throw new Error("ID de categoria invalido");
+  }
+
+  if (!name || !name.trim()) {
+    throw new Error("Nome da categoria e obrigatorio");
+  }
+
+  const categoryResult = await client.query(
+    `
+      SELECT *
+      FROM categories
+      WHERE id = $1 AND user_id = $2
+    `,
+    [normalizedCategoryId, userId],
+  );
+
+  if (categoryResult.rows.length === 0) {
+    throw new Error("Categoria nao encontrada");
+  }
+
+  const normalizedName = name.trim();
+  const duplicate = await client.query(
+    `
+      SELECT id
+      FROM categories
+      WHERE user_id = $1
+        AND LOWER(name) = LOWER($2)
+        AND id <> $3
+    `,
+    [userId, normalizedName, normalizedCategoryId],
+  );
+
+  if (duplicate.rows.length > 0) {
+    throw new Error("Categoria ja existe");
+  }
+
+  const result = await client.query(
+    `
+      UPDATE categories
+      SET name = $1
+      WHERE id = $2 AND user_id = $3
+      RETURNING *
+    `,
+    [normalizedName, normalizedCategoryId, userId],
+  );
+
+  return result.rows[0];
+}
+
+export async function deleteCategoryForUser(userId, categoryId, client = pool) {
+  const normalizedCategoryId = parsePositiveInt(categoryId);
+
+  if (!normalizedCategoryId) {
+    throw new Error("ID de categoria invalido");
+  }
+
+  const categoryResult = await client.query(
+    `
+      SELECT *
+      FROM categories
+      WHERE id = $1 AND user_id = $2
+    `,
+    [normalizedCategoryId, userId],
+  );
+
+  if (categoryResult.rows.length === 0) {
+    throw new Error("Categoria nao encontrada");
+  }
+
+  const usedInEntries = await client.query(
+    `
+      SELECT COUNT(*) AS count
+      FROM entries
+      WHERE category_id = $1 AND user_id = $2
+    `,
+    [normalizedCategoryId, userId],
+  );
+
+  if (Number(usedInEntries.rows[0]?.count || 0) > 0) {
+    throw new Error("Nao e possivel deletar uma categoria que esta sendo usada");
+  }
+
+  await client.query(
+    `
+      DELETE FROM categories
+      WHERE id = $1 AND user_id = $2
+    `,
+    [normalizedCategoryId, userId],
+  );
+
+  return categoryResult.rows[0];
 }
 
 function buildEntriesDateCondition(params, startDate, endDate) {
