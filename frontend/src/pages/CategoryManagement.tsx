@@ -187,7 +187,7 @@ export default function CategoryManagement() {
                       {defaultCategories.map((category) => (
                         <div
                           key={category.id}
-                          className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2 xs:gap-4 p-3 xs:p-4 hover:bg-muted/50 transition-colors"
+                          className="flex flex-col gap-2 p-3 xs:p-4 hover:bg-muted/50 transition-colors"
                         >
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-xs sm:text-base truncate">{category.name}</p>
@@ -195,7 +195,7 @@ export default function CategoryManagement() {
                               Categoria padrão
                             </p>
                           </div>
-                          <AlertDialog>
+                          {false && <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button
                                 variant="ghost"
@@ -229,7 +229,7 @@ export default function CategoryManagement() {
                                 </AlertDialogAction>
                               </div>
                             </AlertDialogContent>
-                          </AlertDialog>
+                          </AlertDialog>}
                         </div>
                       ))}
                     </div>
