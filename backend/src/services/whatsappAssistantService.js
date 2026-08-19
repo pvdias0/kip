@@ -1658,7 +1658,7 @@ async function buildValidationResult(
 
   if (intent === "update_category" || intent === "delete_category") {
     const resolvedCategory = resolveNamedTarget({
-      items: userContext.categories.filter((category) => category.user_id !== null),
+      items: userContext.categories,
       recentItems: sessionContext.recent_categories || [],
       explicitName: slots.category_name,
       slots,
@@ -1666,6 +1666,11 @@ async function buildValidationResult(
 
     if (!resolvedCategory) {
       missingFields.push("reference_text");
+    } else if (resolvedCategory.user_id === null) {
+      validationMessage =
+        intent === "delete_category"
+          ? "⚠️ Categorias padrao do KIP nao podem ser excluidas."
+          : "⚠️ Categorias padrao do KIP nao podem ser editadas.";
     } else {
       resolvedTargets.category = resolvedCategory;
     }

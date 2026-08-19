@@ -394,13 +394,18 @@ export async function updateCategoryForUser(
     `
       SELECT *
       FROM categories
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1
+        AND (user_id IS NULL OR user_id = $2)
     `,
     [normalizedCategoryId, userId],
   );
 
   if (categoryResult.rows.length === 0) {
     throw new Error("Categoria nao encontrada");
+  }
+
+  if (categoryResult.rows[0].user_id === null) {
+    throw new Error("Categorias padrao nao podem ser editadas");
   }
 
   const normalizedName = name.trim();
@@ -443,13 +448,18 @@ export async function deleteCategoryForUser(userId, categoryId, client = pool) {
     `
       SELECT *
       FROM categories
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1
+        AND (user_id IS NULL OR user_id = $2)
     `,
     [normalizedCategoryId, userId],
   );
 
   if (categoryResult.rows.length === 0) {
     throw new Error("Categoria nao encontrada");
+  }
+
+  if (categoryResult.rows[0].user_id === null) {
+    throw new Error("Categorias padrao nao podem ser excluidas");
   }
 
   const usedInEntries = await client.query(

@@ -89,7 +89,7 @@ export const deleteCategory = async (req, res) => {
     // Check if category exists AND belongs to this user (not global categories)
     // Security fix: users can only delete their own categories
     const category = await pool.query(
-      "SELECT * FROM categories WHERE id = $1 AND user_id = $2",
+      "SELECT * FROM categories WHERE id = $1 AND (user_id IS NULL OR user_id = $2)",
       [categoryId, userId],
     );
 
@@ -97,6 +97,13 @@ export const deleteCategory = async (req, res) => {
       return res.status(404).json({
         status: "ERROR",
         message: "Categoria não encontrada",
+      });
+    }
+
+    if (category.rows[0].user_id === null) {
+      return res.status(400).json({
+        status: "ERROR",
+        message: "Categorias padrÃ£o nÃ£o podem ser deletadas",
       });
     }
 
