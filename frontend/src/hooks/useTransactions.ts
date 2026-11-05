@@ -7,6 +7,7 @@ import {
 } from "@/types/finance";
 import { apiService } from "@/services/api";
 import { useSocket } from "./useSocket";
+import { onDataChanged } from "@/lib/data-events";
 import { toast } from "@/components/ui/use-toast";
 
 interface UseTransactionsOptions {
@@ -134,7 +135,7 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
       }
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : "Erro ao buscar transacoes";
+        err instanceof Error ? err.message : "Erro ao buscar transações";
 
       setError(message);
       console.error("Fetch transactions error:", err);
@@ -153,6 +154,16 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
     }
 
     void refreshTransactions();
+  }, [enabled, refreshTransactions]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    return onDataChanged(() => {
+      void refreshTransactions();
+    });
   }, [enabled, refreshTransactions]);
 
   useEffect(() => {
@@ -195,12 +206,12 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
         }
 
         toast({
-          title: "Transacao criada",
-          description: "A transacao foi registrada com sucesso.",
+          title: "Transação criada",
+          description: "A transação foi registrada com sucesso.",
         });
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Erro ao adicionar transacao";
+          err instanceof Error ? err.message : "Erro ao adicionar transação";
 
         setError(message);
         throw err;
@@ -233,14 +244,14 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
         }
 
         toast({
-          title: "Transacao atualizada",
+          title: "Transação atualizada",
           description: updatedTransaction
             ? `"${updatedTransaction.description}" foi atualizada com sucesso.`
-            : "A transacao foi atualizada com sucesso.",
+            : "A transação foi atualizada com sucesso.",
         });
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Erro ao atualizar transacao";
+          err instanceof Error ? err.message : "Erro ao atualizar transação";
 
         setError(message);
         throw err;
@@ -270,14 +281,14 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
         }
 
         toast({
-          title: "Transacao deletada",
+          title: "Transação deletada",
           description: deletedTransaction
             ? `"${deletedTransaction.description}" foi removida com sucesso.`
-            : "A transacao foi removida com sucesso.",
+            : "A transação foi removida com sucesso.",
         });
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Erro ao deletar transacao";
+          err instanceof Error ? err.message : "Erro ao deletar transação";
 
         setError(message);
         throw err;

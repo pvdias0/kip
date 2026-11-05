@@ -11,7 +11,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { addMonths, subMonths, isSameMonth, format, startOfMonth, endOfMonth } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { motion, type Variants } from "framer-motion";
 import { AppShell } from "@/components/app/AppShell";
 
@@ -26,6 +25,7 @@ const Dashboard = () => {
   });
 
   const stats = useTransactionStats(transactions, selectedMonth);
+  const hasAccountData = transactions.some((transaction) => transaction.payment_account_id);
 
   const now = new Date();
   const canGoNext = !isSameMonth(selectedMonth, now);
@@ -40,7 +40,6 @@ const Dashboard = () => {
     }
   };
 
-  const today = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -66,7 +65,7 @@ const Dashboard = () => {
   };
 
   return (
-    <AppShell title="Dashboard" subtitle={today}>
+    <AppShell title="Relatórios" subtitle="Para onde vai o seu dinheiro">
       <motion.main
         className="container-app flex-1 space-y-8 py-6 sm:py-8"
         variants={containerVariants}
@@ -87,25 +86,25 @@ const Dashboard = () => {
         <motion.section variants={itemVariants}>
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-lg font-display font-semibold text-foreground">
-              Resumo do Mês
+              Resumo do mês
             </h2>
             <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <SummaryCard
-              title="Total de Ganhos"
+              title="Ganhos"
               value={stats.totalIncome}
               icon={TrendingUp}
               variant="income"
             />
             <SummaryCard
-              title="Total de Gastos"
+              title="Gastos"
               value={stats.totalExpense}
               icon={TrendingDown}
               variant="expense"
             />
             <SummaryCard
-              title="Saldo do Mês"
+              title="Resultado do mês"
               value={stats.balance}
               icon={Wallet}
             />
@@ -116,20 +115,20 @@ const Dashboard = () => {
         <motion.section variants={itemVariants}>
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-lg font-display font-semibold text-foreground">
-              Distribuição por Categoria
+              Por categoria
             </h2>
             <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <CategoryChart
               data={stats.incomeCategoryData}
-              title="De onde vêm os Ganhos"
+              title="De onde vem o dinheiro"
               type="income"
               emptyMessage="Nenhum ganho registrado"
             />
             <CategoryChart
               data={stats.expenseCategoryData}
-              title="Para onde vão os Gastos"
+              title="Para onde vai o dinheiro"
               type="expense"
               emptyMessage="Nenhum gasto registrado"
             />
@@ -139,7 +138,7 @@ const Dashboard = () => {
         <motion.section variants={itemVariants}>
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-lg font-display font-semibold text-foreground">
-              Distribuição por Forma de Pagamento
+              Por forma de pagamento
             </h2>
             <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
           </div>
@@ -159,10 +158,11 @@ const Dashboard = () => {
           </div>
         </motion.section>
 
+        {hasAccountData ? (
         <motion.section variants={itemVariants}>
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-lg font-display font-semibold text-foreground">
-              Distribuição por Conta de Pagamento
+              Por conta
             </h2>
             <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
           </div>
@@ -181,25 +181,26 @@ const Dashboard = () => {
             />
           </div>
         </motion.section>
+        ) : null}
 
         {/* Rankings Section */}
         <motion.section variants={itemVariants}>
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-lg font-display font-semibold text-foreground">
-              Top Transações
+              Maiores lançamentos
             </h2>
             <div className="flex-1 h-px bg-gradient-to-r from-border to-transparent" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RankingList
               transactions={stats.topIncomes}
-              title="Top 5 Maiores Ganhos"
+              title="Maiores ganhos"
               type="income"
               emptyMessage="Nenhum ganho registrado"
             />
             <RankingList
               transactions={stats.topExpenses}
-              title="Top 5 Maiores Gastos"
+              title="Maiores gastos"
               type="expense"
               emptyMessage="Nenhum gasto registrado"
             />
@@ -207,21 +208,6 @@ const Dashboard = () => {
         </motion.section>
       </motion.main>
 
-      <motion.footer
-        className="mt-auto border-t border-border/50 bg-background/50 py-6 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-      >
-        <div className="container-app text-center">
-          <p className="text-sm text-muted-foreground">
-            Visualize suas financas de forma clara e objetiva
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground/60">
-            © {new Date().getFullYear()} KIP • Seu organizador financeiro
-          </p>
-        </div>
-      </motion.footer>
     </AppShell>
   );
 };

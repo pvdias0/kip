@@ -1,16 +1,6 @@
 import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  BarChart3,
-  CreditCard,
-  Landmark,
-  LogOut,
-  MessageCircle,
-  Settings2,
-  UserRound,
-  Wallet,
-} from "lucide-react";
-
+import { LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { KipLogo } from "@/components/ui/KipLogo";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -20,6 +10,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -28,55 +19,12 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { mainNavigation, settingsNavigation, type NavItem } from "@/components/app/navigation";
 
 type AppSidebarProps = {
   onLogoutRequest: () => void;
 };
 
-const navigationItems = [
-  {
-    label: "Transacoes",
-    href: "/",
-    icon: Wallet,
-    isActive: (pathname: string) => pathname === "/",
-  },
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: BarChart3,
-    isActive: (pathname: string) => pathname === "/dashboard",
-  },
-  {
-    label: "Categorias",
-    href: "/categories",
-    icon: Settings2,
-    isActive: (pathname: string) => pathname.startsWith("/categories"),
-  },
-  {
-    label: "Pagamentos",
-    href: "/payment-methods",
-    icon: CreditCard,
-    isActive: (pathname: string) => pathname.startsWith("/payment-methods"),
-  },
-  {
-    label: "Contas",
-    href: "/payment-accounts",
-    icon: Landmark,
-    isActive: (pathname: string) => pathname.startsWith("/payment-accounts"),
-  },
-  {
-    label: "WhatsApp",
-    href: "/whatsapp",
-    icon: MessageCircle,
-    isActive: (pathname: string) => pathname.startsWith("/whatsapp"),
-  },
-  {
-    label: "Perfil",
-    href: "/profile",
-    icon: UserRound,
-    isActive: (pathname: string) => pathname.startsWith("/profile"),
-  },
-];
 
 function getInitials(name?: string) {
   if (!name) {
@@ -126,7 +74,7 @@ export function AppSidebar({ onLogoutRequest }: AppSidebarProps) {
           {!collapsed ? (
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-sidebar-foreground">
-                {user?.name || "Usuario"}
+                {user?.name || "Usuário"}
               </p>
               <p className="truncate text-xs text-sidebar-foreground/70">
                 {user?.email || "sem email"}
@@ -137,26 +85,32 @@ export function AppSidebar({ onLogoutRequest }: AppSidebarProps) {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarMenu>
-            {navigationItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={item.isActive(pathname)}
-                  tooltip={item.label}
-                  size="lg"
-                  className={cn(collapsed && "justify-center")}
-                >
-                  <Link to={item.href}>
-                    <item.icon />
-                    {!collapsed ? <span>{item.label}</span> : null}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
+        {[
+          { label: "Finanças", items: mainNavigation },
+          { label: "Configurações", items: settingsNavigation },
+        ].map((group) => (
+          <SidebarGroup key={group.label}>
+            {!collapsed ? <SidebarGroupLabel>{group.label}</SidebarGroupLabel> : null}
+            <SidebarMenu>
+              {group.items.map((item: NavItem) => (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={item.match(pathname)}
+                    tooltip={item.label}
+                    size="lg"
+                    className={cn(collapsed && "justify-center")}
+                  >
+                    <Link to={item.href}>
+                      <item.icon />
+                      {!collapsed ? <span>{item.label}</span> : null}
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border/70 pt-4">

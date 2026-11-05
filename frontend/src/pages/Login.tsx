@@ -46,14 +46,14 @@ export default function Login() {
       await login(email, password);
       toast({
         title: "Login realizado com sucesso",
-        description: "Voce entrou na sua conta.",
+        description: "Você entrou na sua conta.",
       });
       navigate("/");
     } catch (err) {
       console.error("Login page caught error:", err);
       toast({
         variant: "destructive",
-        title: "Nao foi possivel entrar",
+        title: "Não foi possível entrar",
         description:
           err instanceof Error ? err.message : "Ocorreu um erro durante o login",
       });
@@ -286,13 +286,13 @@ export default function Login() {
                     to="/terms-of-service"
                     className="hover:text-primary hover:underline"
                   >
-                    Termos de Servico
+                    Termos de Serviço
                   </Link>
                   <Link
                     to="/privacy-policy"
                     className="hover:text-primary hover:underline"
                   >
-                    Politica de Privacidade
+                    Política de Privacidade
                   </Link>
                 </div>
               </CardContent>

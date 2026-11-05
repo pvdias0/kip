@@ -1,10 +1,14 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthContext";
 import { AppSidebar } from "@/components/app/AppSidebar";
+import { BottomNav } from "@/components/app/BottomNav";
+import { useEntrySheet } from "@/components/entry/EntrySheetProvider";
+import { useRealtimeSync } from "@/hooks/useFinanceData";
+import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import {
   AlertDialog,
@@ -12,6 +16,7 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -23,18 +28,32 @@ type AppShellProps = {
   headerActions?: ReactNode;
   children: ReactNode;
   insetClassName?: string;
+  /** Esconde o botao "Novo lancamento" do cabecalho (ex.: telas de configuracao). */
+  hideNewEntry?: boolean;
 };
 
-export function AppShell({
-  title,
-  subtitle,
-  headerActions,
-  children,
-  insetClassName,
-}: AppShellProps) {
+const LOGOUT_EVENT = "kip:logout-request";
+
+/** Abre a confirmacao de saida de qualquer lugar (ex.: tela "Mais" no celular). */
+export function requestLogout() {
+  window.dispatchEvent(new Event(LOGOUT_EVENT));
+}
+
+// sidebar aberta so em telas largas; no tablet comeca recolhida (so icones)
+const sidebarStartsOpen = typeof window === "undefined" || window.innerWidth >= 1280;
+
+export function AppShell({ title, subtitle, headerActions, children, insetClassName, hideNewEntry }: AppShellProps) {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { openNew } = useEntrySheet();
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
+  useRealtimeSync();
+
+  useEffect(() => {
+    const open = () => setIsLogoutDialogOpen(true);
+    window.addEventListener(LOGOUT_EVENT, open);
+    return () => window.removeEventListener(LOGOUT_EVENT, open);
+  }, []);
 
   const handleLogoutConfirm = () => {
     logout();
@@ -43,64 +62,46 @@ export function AppShell({
   };
 
   return (
-    <SidebarProvider defaultOpen>
+    <SidebarProvider defaultOpen={sidebarStartsOpen}>
       <AppSidebar onLogoutRequest={() => setIsLogoutDialogOpen(true)} />
-      <SidebarInset
-        className={cn(
-          "bg-gradient-to-br from-background via-muted/35 to-background",
-          insetClassName,
-        )}
-      >
-        <motion.header
-          className="header-blur sticky top-0 z-40 border-b border-border/40"
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-        >
-          <div className="container-app py-3 sm:py-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <SidebarTrigger className="h-10 w-10 rounded-xl border border-border/60 bg-background/80 shadow-sm hover:bg-accent/60" />
-                <div className="min-w-0">
-                  <h1 className="truncate text-lg font-display font-bold text-foreground sm:text-xl">
-                    {title}
-                  </h1>
-                  {subtitle ? (
-                    <p className="truncate text-xs text-muted-foreground sm:text-sm">
-                      {subtitle}
-                    </p>
-                  ) : null}
-                </div>
+      <SidebarInset className={cn("bg-background", insetClassName)}>
+        <header className="header-blur sticky top-0 z-30 border-b border-border/40">
+          <div className="container-app flex items-center justify-between gap-3 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <SidebarTrigger className="hidden h-10 w-10 rounded-xl border border-border/60 bg-background/80 md:inline-flex" />
+              <div className="min-w-0">
+                <h1 className="truncate font-display text-lg font-bold text-foreground sm:text-xl">{title}</h1>
+                {subtitle ? <p className="truncate text-xs text-muted-foreground sm:text-sm">{subtitle}</p> : null}
               </div>
-
-              {headerActions ? (
-                <div className="flex items-center gap-2">{headerActions}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              {headerActions}
+              {!hideNewEntry ? (
+                <Button onClick={() => openNew()} className="hidden gap-2 font-semibold md:inline-flex">
+                  <Plus className="h-4 w-4" />
+                  Novo lançamento
+                </Button>
               ) : null}
             </div>
           </div>
-        </motion.header>
+        </header>
 
-        {children}
+        <div className="flex flex-1 flex-col pb-24 md:pb-0">{children}</div>
+
+        <BottomNav />
 
         <AlertDialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
-          <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogContent className="w-[92vw] sm:max-w-md">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-xl font-display">
-                Deseja sair?
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-base">
-                Voce sera redirecionado para a pagina de login.
-              </AlertDialogDescription>
+              <AlertDialogTitle className="font-display text-xl">Sair do KIP?</AlertDialogTitle>
+              <AlertDialogDescription>Você vai voltar para a tela de login.</AlertDialogDescription>
             </AlertDialogHeader>
-            <div className="flex justify-end gap-3 pt-4">
-              <AlertDialogCancel className="px-6">Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleLogoutConfirm}
-                className="bg-destructive px-6 hover:bg-destructive/90"
-              >
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleLogoutConfirm} className="bg-destructive hover:bg-destructive/90">
                 Sair
               </AlertDialogAction>
-            </div>
+            </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </SidebarInset>

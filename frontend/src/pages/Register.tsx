@@ -74,7 +74,7 @@ export default function Register() {
         variant: "destructive",
         title: "Aceite obrigatorio",
         description:
-          "Voce precisa aceitar os Termos de Servico e a Politica de Privacidade.",
+          "Você precisa aceitar os Termos de Serviço e a Política de Privacidade.",
       });
       return;
     }
@@ -95,11 +95,11 @@ export default function Register() {
       console.error("Register error:", err);
       toast({
         variant: "destructive",
-        title: "Nao foi possivel criar a conta",
+        title: "Não foi possível criar a conta",
         description:
           err instanceof Error
             ? err.message
-            : "Este email pode ja estar registrado.",
+            : "Este email pode já estar registrado.",
       });
     }
   };

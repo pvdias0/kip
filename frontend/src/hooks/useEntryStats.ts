@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { TransactionSummary } from "@/types/finance";
 import { apiService } from "@/services/api";
 import { useSocket } from "./useSocket";
+import { onDataChanged } from "@/lib/data-events";
 
 interface UseEntryStatsOptions {
   enabled?: boolean;
@@ -51,6 +52,16 @@ export function useEntryStats(options: UseEntryStatsOptions = {}) {
     }
 
     void refreshStats();
+  }, [enabled, refreshStats]);
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    return onDataChanged(() => {
+      void refreshStats();
+    });
   }, [enabled, refreshStats]);
 
   useEffect(() => {

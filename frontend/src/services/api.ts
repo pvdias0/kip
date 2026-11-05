@@ -261,7 +261,7 @@ class ApiService {
       type: "income" | "expense";
       amount: number;
       description: string;
-      category_id?: number;
+      category_id?: number | null;
       payment_method_id?: number;
       payment_account_id?: number;
       date: string;
@@ -289,6 +289,87 @@ class ApiService {
       ? `/entries/stats?${queryString}`
       : "/entries/stats";
     return this.request(endpoint);
+  }
+
+  // ---------- visao geral financeira ----------
+
+  async getFinanceOverview() {
+    return this.request("/finance/overview");
+  }
+
+  async createAccount(data: {
+    name: string;
+    current_balance?: number;
+    payment_method_ids: number[];
+    credit_limit?: number | null;
+    closing_day?: number | null;
+    due_day?: number | null;
+  }) {
+    return this.request("/finance/accounts", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async updateAccount(
+    id: number,
+    data: Partial<{
+      name: string;
+      payment_method_ids: number[];
+      credit_limit: number | null;
+      closing_day: number | null;
+      due_day: number | null;
+    }>,
+  ) {
+    return this.request(`/finance/accounts/${id}`, { method: "PUT", body: JSON.stringify(data) });
+  }
+
+  async adjustAccountBalance(id: number | "unassigned", balance: number) {
+    return this.request(`/finance/accounts/${id}/adjust-balance`, {
+      method: "POST",
+      body: JSON.stringify({ balance }),
+    });
+  }
+
+  async getTransfers(limit = 20) {
+    return this.request(`/finance/transfers?limit=${limit}`);
+  }
+
+  async createTransfer(data: {
+    kind: "transfer" | "card_payment";
+    amount: number;
+    date: string;
+    from_account_id?: number | null;
+    to_account_id?: number | null;
+    description?: string;
+  }) {
+    return this.request("/finance/transfers", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async deleteTransfer(id: number) {
+    return this.request(`/finance/transfers/${id}`, { method: "DELETE" });
+  }
+
+  async createDebt(data: Record<string, unknown>) {
+    return this.request("/finance/debts", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async updateDebt(id: number, data: Record<string, unknown>) {
+    return this.request(`/finance/debts/${id}`, { method: "PUT", body: JSON.stringify(data) });
+  }
+
+  async deleteDebt(id: number) {
+    return this.request(`/finance/debts/${id}`, { method: "DELETE" });
+  }
+
+  async payDebt(
+    id: number,
+    data: {
+      amount: number;
+      date: string;
+      payment_method_id: number;
+      payment_account_id?: number | null;
+      category_id?: number | null;
+    },
+  ) {
+    return this.request(`/finance/debts/${id}/payments`, { method: "POST", body: JSON.stringify(data) });
   }
 }
 

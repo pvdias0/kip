@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatMonthLabel } from '@/lib/format';
 import { motion } from 'framer-motion';
 
 interface MonthNavigatorProps {
@@ -17,7 +16,7 @@ export function MonthNavigator({
   onNextMonth,
   canGoNext
 }: MonthNavigatorProps) {
-  const monthYear = format(currentDate, "MMMM 'de' yyyy", { locale: ptBR });
+  const monthYear = formatMonthLabel(currentDate);
 
   return (
     <motion.div
@@ -30,6 +29,7 @@ export function MonthNavigator({
         variant="outline"
         size="icon"
         onClick={onPreviousMonth}
+        aria-label="Mês anterior"
         className="h-11 w-11 rounded-xl border-2 hover:bg-primary/10 hover:border-primary/50 hover:text-primary transition-all"
       >
         <ChevronLeft className="h-5 w-5" />
@@ -43,7 +43,7 @@ export function MonthNavigator({
         transition={{ duration: 0.2 }}
       >
         <Calendar className="h-4 w-4 flex-shrink-0 text-primary sm:h-5 sm:w-5" />
-        <span className="truncate text-center text-sm font-display font-semibold capitalize text-foreground sm:text-lg">
+        <span className="truncate text-center text-sm font-display font-semibold text-foreground sm:text-lg">
           {monthYear}
         </span>
       </motion.div>

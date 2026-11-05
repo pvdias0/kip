@@ -1,7 +1,7 @@
 import pool from "../config/database.js";
 
 export const DEFAULT_PAYMENT_METHODS = [
-  { name: "Crédito", accountsEnabled: true },
+  { name: "Crédito", accountsEnabled: true, isCredit: true },
   { name: "Débito", accountsEnabled: true },
   { name: "Pix", accountsEnabled: true },
   { name: "Dinheiro", accountsEnabled: false },
@@ -16,8 +16,8 @@ export async function ensureDefaultPaymentMethodsForUser(
   for (const method of DEFAULT_PAYMENT_METHODS) {
     await client.query(
       `
-        INSERT INTO payment_methods (user_id, name, accounts_enabled, is_default)
-        SELECT $1, $2::VARCHAR(80), $3, TRUE
+        INSERT INTO payment_methods (user_id, name, accounts_enabled, is_default, is_credit)
+        SELECT $1, $2::VARCHAR(80), $3, TRUE, $4
         WHERE NOT EXISTS (
           SELECT 1
           FROM payment_methods
@@ -26,7 +26,7 @@ export async function ensureDefaultPaymentMethodsForUser(
             AND deleted_at IS NULL
         )
       `,
-      [userId, method.name, method.accountsEnabled],
+      [userId, method.name, method.accountsEnabled, Boolean(method.isCredit)],
     );
   }
 }
@@ -48,6 +48,7 @@ export async function getPaymentMethodsWithAccounts(userId, client = pool) {
         pm.name,
         pm.accounts_enabled,
         pm.is_default,
+        pm.is_credit,
         pm.created_at,
         pa.id AS account_id,
         pa.user_id AS account_user_id,
@@ -87,6 +88,7 @@ export async function getPaymentMethodsWithAccounts(userId, client = pool) {
         name: row.name,
         accounts_enabled: row.accounts_enabled,
         is_default: row.is_default,
+        is_credit: row.is_credit,
         created_at: row.created_at,
         accounts: [],
       });

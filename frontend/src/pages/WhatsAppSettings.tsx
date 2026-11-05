@@ -13,7 +13,7 @@ import type { WhatsAppProfile, WhatsAppVerificationStatus } from "@/types/whatsa
 
 function getVerificationBadge(status: WhatsAppVerificationStatus) {
   if (status === "verified") {
-    return <Badge variant="default">Numero verificado</Badge>;
+    return <Badge variant="default">Número verificado</Badge>;
   }
 
   return <Badge variant="outline">Verificacao pendente</Badge>;
@@ -62,7 +62,7 @@ export default function WhatsAppSettings() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel carregar as configuracoes do WhatsApp.",
+            : "Não foi possível carregar as configurações do WhatsApp.",
         );
       } finally {
         if (mounted) {
@@ -98,13 +98,13 @@ export default function WhatsAppSettings() {
       setProfile(updatedProfile);
       setPhoneNumber(updatedProfile.phone_number || "");
       setSuccessMessage(
-        response.message || "Configuracoes de WhatsApp atualizadas com sucesso.",
+        response.message || "Configurações de WhatsApp atualizadas com sucesso.",
       );
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Nao foi possivel salvar as configuracoes do WhatsApp.",
+          : "Não foi possível salvar as configurações do WhatsApp.",
       );
     } finally {
       setIsSaving(false);
@@ -116,7 +116,7 @@ export default function WhatsAppSettings() {
   return (
     <AppShell
       title="WhatsApp"
-      subtitle="Gerencie seu numero vinculado para conversar com o KIP"
+      subtitle="Gerencie seu número vinculado para conversar com o KIP"
     >
       <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
         {errorMessage ? (
@@ -135,10 +135,10 @@ export default function WhatsAppSettings() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Smartphone className="h-5 w-5 text-primary" />
-                  Vinculo do numero
+                  Vínculo do número
                 </CardTitle>
                 <CardDescription>
-                  O numero so e marcado como verificado depois da primeira mensagem recebida.
+                  O número só é marcado como verificado depois da primeira mensagem recebida.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -146,7 +146,7 @@ export default function WhatsAppSettings() {
                   <div className="flex flex-wrap items-center gap-2">
                     {getVerificationBadge(profile?.verification_status || "pending")}
                     <Badge variant="secondary">
-                      {profile?.phone_number_e164 || "Sem numero vinculado"}
+                      {profile?.phone_number_e164 || "Sem número vinculado"}
                     </Badge>
                   </div>
                   {kipWhatsAppLink ? (
@@ -168,7 +168,7 @@ export default function WhatsAppSettings() {
                   Configuracao de uso
                 </CardTitle>
                 <CardDescription>
-                  Cadastre seu numero para habilitar o uso completo do KIP no WhatsApp.
+                  Cadastre seu número para habilitar o uso completo do KIP no WhatsApp.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -182,7 +182,7 @@ export default function WhatsAppSettings() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="space-y-2">
                     <div className="space-y-2">
-                      <Label htmlFor="whatsapp-phone">Numero do WhatsApp</Label>
+                      <Label htmlFor="whatsapp-phone">Número do WhatsApp</Label>
                       <Input
                         id="whatsapp-phone"
                         placeholder="+55 11 99999-9999"
@@ -192,7 +192,7 @@ export default function WhatsAppSettings() {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Ao cadastrar seu numero nesta tela, voce declara o consentimento para comunicacoes do KIP no WhatsApp.
+                      Ao cadastrar seu número nesta tela, você declara o consentimento para comunicações do KIP no WhatsApp.
                     </p>
                   </div>
 

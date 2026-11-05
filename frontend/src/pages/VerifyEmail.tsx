@@ -39,7 +39,7 @@ export default function VerifyEmail() {
         setStatus("success");
         setMessage(
           response.message ||
-            "Email confirmado com sucesso. Voce ja pode entrar na sua conta.",
+            "Email confirmado com sucesso. Você já pode entrar na sua conta.",
         );
       } catch (error) {
         if (!isMounted) {
@@ -50,7 +50,7 @@ export default function VerifyEmail() {
         setMessage(
           error instanceof Error
             ? error.message
-            : "Nao foi possivel confirmar seu email.",
+            : "Não foi possível confirmar seu email.",
         );
       }
     };
