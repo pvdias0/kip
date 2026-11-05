@@ -21,7 +21,10 @@ import paymentMethodsRoutes from "./routes/paymentMethods.js";
 import passwordResetRoutes from "./routes/passwordReset.js";
 import whatsappRoutes from "./routes/whatsapp.js";
 import { isWhatsAppConfigured } from "./config/whatsapp.js";
-import { syncWhatsAppChannelConfig } from "./utils/whatsapp.js";
+import {
+  recoverStaleProcessingMessages,
+  syncWhatsAppChannelConfig,
+} from "./utils/whatsapp.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,12 +100,21 @@ app.use(
   }),
 );
 
+const captureRawBody = (req, res, buffer) => {
+  req.rawBody = buffer.toString("utf8");
+};
+
+// Webhooks da Meta podem agrupar varios eventos e passar de 10kb; um 413 faria a
+// Meta reenviar e, insistindo, desativar o webhook. Registrado antes do parser
+// global, que pula requisicoes cujo corpo ja foi lido.
+app.use(
+  "/api/whatsapp/webhook",
+  express.json({ limit: "1mb", verify: captureRawBody }),
+);
 app.use(
   express.json({
     limit: "10kb",
-    verify: (req, res, buffer) => {
-      req.rawBody = buffer.toString("utf8");
-    },
+    verify: captureRawBody,
   }),
 );
 app.use("/api", apiLimiter);
@@ -174,6 +186,16 @@ const startServer = async () => {
   }
 
   await connectRedis();
+
+  try {
+    const recovered = await recoverStaleProcessingMessages();
+
+    if (recovered > 0) {
+      console.warn(`WhatsApp: ${recovered} mensagem(ns) presa(s) em processing marcada(s) como failed.`);
+    }
+  } catch (recoveryError) {
+    console.error("Failed to recover stale WhatsApp messages:", recoveryError.message);
+  }
 
   httpServer.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);

@@ -4,6 +4,36 @@ function trimTrailingSlash(value) {
   return value.replace(/\/+$/, "");
 }
 
+function readPositiveInt(name, fallback) {
+  const value = Number.parseInt(process.env[name] ?? "", 10);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+export function getWhatsAppFloodGuardConfig() {
+  return {
+    enabled:
+      (process.env.WHATSAPP_FLOOD_GUARD_ENABLED || "true").trim().toLowerCase() !==
+      "false",
+    perMinute: readPositiveInt("WHATSAPP_RATE_LIMIT_PER_MINUTE", 12),
+    perHour: readPositiveInt("WHATSAPP_RATE_LIMIT_PER_HOUR", 120),
+    perDay: readPositiveInt("WHATSAPP_RATE_LIMIT_PER_DAY", 400),
+    noticeCooldownMinutes: readPositiveInt(
+      "WHATSAPP_RATE_LIMIT_NOTICE_COOLDOWN_MINUTES",
+      30,
+    ),
+    unknownReplyCooldownHours: readPositiveInt(
+      "WHATSAPP_UNKNOWN_REPLY_COOLDOWN_HOURS",
+      24,
+    ),
+    unknownRepliesPerHour: readPositiveInt("WHATSAPP_UNKNOWN_REPLIES_PER_HOUR", 60),
+    unsupportedReplyCooldownMinutes: readPositiveInt(
+      "WHATSAPP_UNSUPPORTED_REPLY_COOLDOWN_MINUTES",
+      60,
+    ),
+    maxMessageLength: readPositiveInt("WHATSAPP_MAX_MESSAGE_LENGTH", 1000),
+  };
+}
+
 export function getWhatsAppConfig() {
   const replyWindowHours = Number.parseInt(
     process.env.WHATSAPP_REPLY_WINDOW_HOURS || "24",

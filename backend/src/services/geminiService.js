@@ -1,5 +1,6 @@
 const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const BRAZIL_TIME_ZONE = "America/Fortaleza";
+const GEMINI_REQUEST_TIMEOUT_MS = 20_000;
 
 const INTENTS = [
   "help",
@@ -249,6 +250,7 @@ export async function interpretWhatsAppIntent({
           responseJsonSchema: INTENT_SCHEMA,
         },
       }),
+      signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
     },
   );
 

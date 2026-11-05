@@ -1,5 +1,15 @@
 import pool from "../config/database.js";
-import { getWhatsAppConfig } from "../config/whatsapp.js";
+import {
+  getWhatsAppConfig,
+  getWhatsAppFloodGuardConfig,
+} from "../config/whatsapp.js";
+import {
+  isSilentMessageType,
+  registerInboundMessage,
+  shouldReplyToUnknownNumber,
+  shouldSendOptInNotice,
+  shouldSendUnsupportedNotice,
+} from "./whatsappFloodGuard.js";
 import {
   createCategoryForUser,
   createEntryForUser,
@@ -37,13 +47,31 @@ import {
   getDateFromWhatsAppTimestamp,
   getTextFromWhatsAppMessage,
   getWhatsAppContactByPhoneNumber,
-  normalizeWhatsAppPhoneNumber,
+  normalizeWhatsAppIdToE164,
   sendWhatsAppTextMessage,
 } from "../utils/whatsapp.js";
 
 const BRAZIL_TIME_ZONE = "America/Fortaleza";
 const CANCEL_PATTERN = /^(cancelar|cancela|cancel|parar|sair)$/i;
 const HELP_PATTERN = /^(\/?ajuda|\/?help)$/i;
+
+/**
+ * Resultado de handleIncomingWhatsAppMessage alem de true (processada) e
+ * false (falhou). Vira o status da mensagem recebida em whatsapp_messages.
+ */
+export const ASSISTANT_RESULT = Object.freeze({
+  IGNORED: "ignored",
+  RATE_LIMITED: "rate_limited",
+});
+
+function buildRateLimitMessage(retryAfterSeconds) {
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  const wait = minutes >= 60
+    ? `${Math.ceil(minutes / 60)} hora(s)`
+    : `${minutes} minuto(s)`;
+
+  return `⏳ Voce enviou muitas mensagens em pouco tempo. Aguarde cerca de ${wait} e tente novamente.`;
+}
 
 function buildEmptySlots() {
   return {
@@ -63,6 +91,21 @@ function buildEmptySlots() {
     new_name: null,
   };
 }
+
+// Heuristicas rodam sobre o texto normalizado (sem acento, minusculo) e com
+// limite de palavra: sem isso "ver" casava com "verduras" e "cria" com "crianca".
+const DELETE_VERB_PATTERN =
+  /\b(delete|deleta|deletar|apaga|apague|apagar|exclui|exclua|excluir|remove|remova|remover)\b/;
+const EDIT_VERB_PATTERN =
+  /\b(edita|edite|editar|altera|altere|alterar|atualiza|atualize|atualizar|renomeia|renomeie|renomear)\b/;
+const LIST_VERB_PATTERN =
+  /\b(lista|liste|listar|mostra|mostre|mostrar|ver|veja|quais)\b/;
+const CREATE_VERBS = "cria|crie|criar|adiciona|adicione|adicionar|cadastra|cadastre|cadastrar";
+// Objeto logo apos o verbo ("crie a categoria X", "nova conta X"); evita que
+// "gastei 50 com a crianca na conta nubank" crie a conta "nubank".
+const CREATE_OBJECT_PREFIX =
+  `(?:^|\\b(?:${CREATE_VERBS})\\s+)(?:(?:a|o|uma|um)\\s+)?(?:(?:nova|novo)\\s+)?`;
+const ENTRY_NOUN_PATTERN = /\b(transacao|lancamento|gasto|receita)\b/;
 
 const IMPLICIT_REFERENCE_PATTERN =
   /^(essa|esse|esta|este|isso|aquela|aquele|ultima|última|ultimo|último|primeira|primeiro)$/i;
@@ -126,42 +169,66 @@ function formatDate(value) {
   });
 }
 
-function getStartOfWeek(referenceDate = new Date()) {
-  const current = new Date(referenceDate);
-  const weekDay = current.getDay();
-  const diff = weekDay === 0 ? -6 : 1 - weekDay;
-  current.setDate(current.getDate() + diff);
-  current.setHours(0, 0, 0, 0);
-  return current;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Datas de calendario sao manipuladas como meia-noite UTC do dia local em
+// America/Fortaleza, para nao depender do fuso do servidor.
+function getLocalCalendarDate(referenceDate = new Date()) {
+  const { year, month, day } = getLocalDateParts(referenceDate);
+  return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
 }
 
-function getEndOfWeek(referenceDate = new Date()) {
-  const current = getStartOfWeek(referenceDate);
-  current.setDate(current.getDate() + 6);
-  current.setHours(0, 0, 0, 0);
-  return current;
+function toDateOnlyString(calendarDate) {
+  return calendarDate.toISOString().slice(0, 10);
 }
 
-function toDateOnlyString(date) {
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 10);
+function isValidCalendarDate(year, month, day) {
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day);
+
+  if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) {
+    return false;
+  }
+
+  const date = new Date(Date.UTC(y, m - 1, d));
+
+  return (
+    date.getUTCFullYear() === y &&
+    date.getUTCMonth() === m - 1 &&
+    date.getUTCDate() === d
+  );
+}
+
+function buildIsoDate(year, month, day) {
+  if (!isValidCalendarDate(year, month, day)) {
+    return null;
+  }
+
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function getCurrentMonthRange(referenceDate = new Date()) {
-  const start = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
-  const end = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
+  const today = getLocalCalendarDate(referenceDate);
+  const year = today.getUTCFullYear();
+  const month = today.getUTCMonth();
 
   return {
-    startDate: toDateOnlyString(start),
-    endDate: toDateOnlyString(end),
+    startDate: toDateOnlyString(new Date(Date.UTC(year, month, 1))),
+    endDate: toDateOnlyString(new Date(Date.UTC(year, month + 1, 0))),
   };
 }
 
 function getCurrentWeekRange(referenceDate = new Date()) {
+  const today = getLocalCalendarDate(referenceDate);
+  const weekDay = today.getUTCDay();
+  const diff = weekDay === 0 ? -6 : 1 - weekDay;
+  const start = new Date(today.getTime() + diff * DAY_MS);
+  const end = new Date(start.getTime() + 6 * DAY_MS);
+
   return {
-    startDate: toDateOnlyString(getStartOfWeek(referenceDate)),
-    endDate: toDateOnlyString(getEndOfWeek(referenceDate)),
+    startDate: toDateOnlyString(start),
+    endDate: toDateOnlyString(end),
   };
 }
 
@@ -367,35 +434,36 @@ function parseRelativeDateText(text, referenceDate = new Date()) {
   }
 
   if (normalized === "ontem") {
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    return getLocalDateString(yesterday);
+    return toDateOnlyString(
+      new Date(getLocalCalendarDate(now).getTime() - DAY_MS),
+    );
   }
 
-  const isoMatch = String(text || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const trimmed = String(text || "").trim();
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
   if (isoMatch) {
-    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+    return buildIsoDate(isoMatch[1], isoMatch[2], isoMatch[3]);
   }
 
-  const brMatch = String(text || "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const brMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
 
   if (brMatch) {
-    return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+    return buildIsoDate(brMatch[3], brMatch[2], brMatch[1]);
   }
 
-  const brShortMatch = String(text || "").trim().match(/^(\d{2})\/(\d{2})$/);
+  const brShortMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})$/);
 
   if (brShortMatch) {
     const { year } = getLocalDateParts(referenceDate);
-    return `${year}-${brShortMatch[2]}-${brShortMatch[1]}`;
+    return buildIsoDate(year, brShortMatch[2], brShortMatch[1]);
   }
 
-  const dayOnlyMatch = String(text || "").trim().match(/^(\d{1,2})$/);
+  const dayOnlyMatch = trimmed.match(/^(\d{1,2})$/);
 
   if (dayOnlyMatch) {
     const { year, month } = getLocalDateParts(referenceDate);
-    return `${year}-${month}-${String(dayOnlyMatch[1]).padStart(2, "0")}`;
+    return buildIsoDate(year, month, dayOnlyMatch[1]);
   }
 
   return null;
@@ -447,7 +515,11 @@ function buildDateRangeFromPeriodText(text, referenceDate = new Date()) {
       ? String(explicitDayMatch[2]).padStart(2, "0")
       : localMonth;
     const year = explicitDayMatch[3] ? explicitDayMatch[3] : localYear;
-    const normalizedDate = `${year}-${month}-${day}`;
+    const normalizedDate = buildIsoDate(year, month, day);
+
+    if (!normalizedDate) {
+      return null;
+    }
 
     return {
       start_date: normalizedDate,
@@ -510,7 +582,12 @@ function normalizeDateSlotsForIntent(intent, slots, referenceDate = new Date()) 
 }
 
 function isIsoDateString(value) {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return Boolean(match && isValidCalendarDate(match[1], match[2], match[3]));
 }
 
 function buildReferenceSlots(messageText) {
@@ -539,6 +616,11 @@ function buildReferenceSlots(messageText) {
 
   if (normalized.includes("essa transacao") || normalized.includes("esse lancamento")) {
     slots.reference_text = "essa transacao";
+  } else if (
+    (normalized.includes("ultima") || normalized.includes("ultimo")) &&
+    normalized.includes("da lista")
+  ) {
+    slots.reference_text = "ultima da lista";
   } else if (normalized.includes("ultima") || normalized.includes("ultimo") || normalized.includes("mais recente")) {
     slots.reference_text = "ultima";
   } else if (normalized.includes("primeira") || normalized.includes("primeiro")) {
@@ -555,6 +637,33 @@ function extractNameAfterKeyword(messageText, keyword) {
   );
 
   return match?.[1]?.trim() || null;
+}
+
+/**
+ * "crie a categoria Lazer" -> "Lazer". So aceita o objeto logo apos o verbo de
+ * criacao (ou "nova/novo" no inicio da frase). A busca e feita no texto
+ * normalizado e o nome e recortado do original pelo mesmo indice; a
+ * normalizacao (NFD + remocao de diacriticos) preserva o comprimento de texto
+ * NFC, que e o que o WhatsApp envia. Se o comprimento mudar, nao arrisca.
+ */
+function matchCreateObject(messageText, objectNoun) {
+  const original = String(messageText || "").normalize("NFC").trim();
+  const normalized = normalizeName(original);
+
+  if (normalized.length !== original.length) {
+    return null;
+  }
+
+  const match = normalized.match(
+    new RegExp(`${CREATE_OBJECT_PREFIX}${objectNoun}\\s+(.+)$`),
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const nameStart = match.index + match[0].length - match[1].length;
+  return original.slice(nameStart).trim() || null;
 }
 
 function buildHeuristicIntent(messageText, session, referenceDate = new Date()) {
@@ -720,10 +829,12 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
     }
   }
 
-  if (/(delete|deleta|deletar|apaga|apagar|exclui|excluir|remove|remover)/i.test(messageText)) {
+  const normalizedText = normalizeName(messageText);
+
+  if (DELETE_VERB_PATTERN.test(normalizedText)) {
     const referenceSlots = buildReferenceSlots(messageText);
 
-    if (/(transacao|transação|lancamento|lançamento|gasto|receita)/i.test(messageText)) {
+    if (ENTRY_NOUN_PATTERN.test(normalizedText)) {
       return {
         intent: "delete_entry",
         confidence: 0.92,
@@ -738,7 +849,7 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
 
     const categoryName = extractNameAfterKeyword(messageText, "categoria");
 
-    if (categoryName || /categoria/i.test(messageText)) {
+    if (categoryName || /\bcategoria\b/.test(normalizedText)) {
       return {
         intent: "delete_category",
         confidence: 0.92,
@@ -754,7 +865,7 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
 
     const accountName = extractNameAfterKeyword(messageText, "conta");
 
-    if (accountName || /conta/i.test(messageText)) {
+    if (accountName || /\bconta\b/.test(normalizedText)) {
       return {
         intent: "delete_payment_account",
         confidence: 0.92,
@@ -772,7 +883,7 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
       extractNameAfterKeyword(messageText, "forma de pagamento") ||
       extractNameAfterKeyword(messageText, "pagamento");
 
-    if (methodName || /forma de pagamento|pagamento/i.test(messageText)) {
+    if (methodName || /\b(forma de pagamento|pagamento)\b/.test(normalizedText)) {
       return {
         intent: "delete_payment_method",
         confidence: 0.92,
@@ -787,10 +898,10 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
     }
   }
 
-  if (/(editar|edita|altera|alterar|atualiza|atualizar|renomeia|renomear)/i.test(messageText)) {
+  if (EDIT_VERB_PATTERN.test(normalizedText)) {
     const referenceSlots = buildReferenceSlots(messageText);
 
-    if (/(transacao|transação|lancamento|lançamento)/i.test(messageText)) {
+    if (/\b(transacao|lancamento)\b/.test(normalizedText)) {
       return {
         intent: "update_entry",
         confidence: 0.9,
@@ -840,7 +951,7 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
     }
 
     const renameAccountMatch = String(messageText || "").match(
-      /conta\s+(.+?)\s+(?:para|pra)\s+(.+)/i,
+      /\bconta\s+(.+?)\s+(?:para|pra)\s+(.+)/i,
     );
 
     if (renameAccountMatch) {
@@ -858,8 +969,8 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
     }
   }
 
-  if (/(listar|liste|lista|mostrar|mostre|ver|veja|quais)/i.test(messageText)) {
-    if (/categor/i.test(messageText)) {
+  if (LIST_VERB_PATTERN.test(normalizedText)) {
+    if (/\bcategorias?\b/.test(normalizedText)) {
       return {
         intent: "list_categories",
         confidence: 0.9,
@@ -869,7 +980,7 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
       };
     }
 
-    if (/forma de pagamento|formas de pagamento|meios de pagamento/i.test(messageText)) {
+    if (/\b(formas? de pagamento|meios de pagamento)\b/.test(normalizedText)) {
       return {
         intent: "list_payment_methods",
         confidence: 0.9,
@@ -879,7 +990,8 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
       };
     }
 
-    if (/conta|contas/i.test(messageText)) {
+    // Plural: "ver quanto gastei na conta nubank" nao e pedido de listagem.
+    if (/\bcontas\b/.test(normalizedText)) {
       return {
         intent: "list_payment_accounts",
         confidence: 0.9,
@@ -890,54 +1002,55 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
     }
   }
 
-  if (/(cria|criar|crie|adiciona|adicionar|adicione|nova|novo)/i.test(messageText)) {
-    const categoryMatch = String(messageText || "").match(/categoria\s+(.+)/i);
+  // Os nomes sao extraidos do texto original para manter acentos/maiusculas.
+  const createCategoryMatch = matchCreateObject(messageText, "categoria");
 
-    if (categoryMatch) {
-      return {
-        intent: "create_category",
-        confidence: 0.9,
-        slots: {
-          ...baseSlots,
-          category_name: categoryMatch[1].trim(),
-        },
-        missing_fields: [],
-        notes: "heuristic:create_category",
-      };
-    }
+  if (createCategoryMatch) {
+    return {
+      intent: "create_category",
+      confidence: 0.9,
+      slots: {
+        ...baseSlots,
+        category_name: createCategoryMatch,
+      },
+      missing_fields: [],
+      notes: "heuristic:create_category",
+    };
+  }
 
-    const methodMatch = String(messageText || "").match(
-      /forma de pagamento\s+(.+?)(?:\s+(com conta|com contas|sem conta|sem contas))?$/i,
+  const createMethodMatch = matchCreateObject(messageText, "forma de pagamento");
+
+  if (createMethodMatch) {
+    const accountsMatch = createMethodMatch.match(
+      /^(.+?)\s+(com conta|com contas|sem conta|sem contas)$/i,
     );
 
-    if (methodMatch) {
-      return {
-        intent: "create_payment_method",
-        confidence: 0.9,
-        slots: {
-          ...baseSlots,
-          payment_method_name: methodMatch[1].trim(),
-          accounts_enabled: parseBooleanText(methodMatch[2] || ""),
-        },
-        missing_fields: [],
-        notes: "heuristic:create_payment_method",
-      };
-    }
+    return {
+      intent: "create_payment_method",
+      confidence: 0.9,
+      slots: {
+        ...baseSlots,
+        payment_method_name: (accountsMatch?.[1] || createMethodMatch).trim(),
+        accounts_enabled: parseBooleanText(accountsMatch?.[2] || ""),
+      },
+      missing_fields: [],
+      notes: "heuristic:create_payment_method",
+    };
+  }
 
-    const accountMatch = String(messageText || "").match(/conta\s+(.+)/i);
+  const createAccountMatch = matchCreateObject(messageText, "conta");
 
-    if (accountMatch) {
-      return {
-        intent: "create_payment_account",
-        confidence: 0.9,
-        slots: {
-          ...baseSlots,
-          payment_account_name: accountMatch[1].trim(),
-        },
-        missing_fields: [],
-        notes: "heuristic:create_payment_account",
-      };
-    }
+  if (createAccountMatch) {
+    return {
+      intent: "create_payment_account",
+      confidence: 0.9,
+      slots: {
+        ...baseSlots,
+        payment_account_name: createAccountMatch,
+      },
+      missing_fields: [],
+      notes: "heuristic:create_payment_account",
+    };
   }
 
   const periodRange = buildDateRangeFromPeriodText(messageText, referenceDate);
@@ -1089,6 +1202,18 @@ function getRecentItemByReference(recentItems, slots) {
     recentItems.length === 1
   ) {
     return recentItems[0];
+  }
+
+  // As listas sao exibidas da mais recente para a mais antiga: "a ultima"
+  // (mais recente) e "a primeira" (item 1) sao o mesmo item; "a ultima da
+  // lista" e o ultimo item exibido.
+  if (
+    (normalizedReferenceText.includes("ultima") ||
+      normalizedReferenceText.includes("ultimo")) &&
+    normalizedReferenceText.includes("da lista") &&
+    recentItems.length > 0
+  ) {
+    return recentItems[recentItems.length - 1];
   }
 
   if (
@@ -2221,6 +2346,7 @@ async function replyAndPersistSession({
   slotState,
   replyText,
   closeSessionAfterReply = false,
+  progress = null,
   client,
 }) {
   if (!isWithinCustomerCareWindow(session, new Date())) {
@@ -2230,13 +2356,17 @@ async function replyAndPersistSession({
   }
 
   const outbound = await sendWhatsAppTextMessage({
-    to: contact.phone_number_e164,
+    to: contact.reply_to || contact.phone_number_e164,
     body: replyText,
     userId: contact.user_id,
     contactId: contact.contact_id,
     relatedMessageId: messageId,
     client,
   });
+
+  if (progress) {
+    progress.replied = true;
+  }
 
   if (closeSessionAfterReply) {
     await closeWhatsAppSession(
@@ -2271,6 +2401,26 @@ async function replyAndPersistSession({
   );
 }
 
+// Mensagens do mesmo numero sao processadas uma de cada vez (por instancia).
+// Webhooks diferentes chegam em paralelo e, sem isso, duas mensagens seguidas
+// liam e gravavam a mesma sessao ao mesmo tempo.
+const inFlightByPhone = new Map();
+
+function runSerializedByKey(key, task) {
+  const previous = inFlightByPhone.get(key) || Promise.resolve();
+  const run = previous.then(task);
+  const tail = run.catch(() => {});
+
+  inFlightByPhone.set(key, tail);
+  tail.then(() => {
+    if (inFlightByPhone.get(key) === tail) {
+      inFlightByPhone.delete(key);
+    }
+  });
+
+  return run;
+}
+
 export async function handleIncomingWhatsAppMessage(message) {
   const config = getWhatsAppConfig();
 
@@ -2278,22 +2428,45 @@ export async function handleIncomingWhatsAppMessage(message) {
     return true;
   }
 
-  const normalizedPhoneNumber = normalizeWhatsAppPhoneNumber(message?.from);
+  // message.from e o wa_id (sempre com DDI): responder para ele, nao para o
+  // numero digitado no perfil.
+  const normalizedPhoneNumber = normalizeWhatsAppIdToE164(message?.from);
 
   if (!normalizedPhoneNumber) {
     return true;
   }
 
+  if (isSilentMessageType(message)) {
+    return ASSISTANT_RESULT.IGNORED;
+  }
+
+  return runSerializedByKey(normalizedPhoneNumber, () =>
+    processIncomingWhatsAppMessage(message, normalizedPhoneNumber, config),
+  );
+}
+
+async function processIncomingWhatsAppMessage(message, normalizedPhoneNumber, config) {
   const client = await pool.connect();
+  // replied: alguma resposta ja foi enviada nesta mensagem.
+  // executedReplyText: a acao (criar/editar/excluir) ja foi executada.
+  const progress = { replied: false, executedReplyText: null };
 
   try {
-    const contact = await getWhatsAppContactByPhoneNumber(normalizedPhoneNumber, client);
+    const contactRecord = await getWhatsAppContactByPhoneNumber(normalizedPhoneNumber, client);
 
-    if (!contact) {
-      console.error("WhatsApp assistant contact lookup failed", {
+    if (!contactRecord) {
+      const shouldReply = await shouldReplyToUnknownNumber(normalizedPhoneNumber);
+
+      console.warn("WhatsApp assistant contact lookup failed", {
         inboundPhoneNumber: normalizedPhoneNumber,
         messageId: message?.id || null,
+        replied: shouldReply,
       });
+
+      if (!shouldReply) {
+        return ASSISTANT_RESULT.IGNORED;
+      }
+
       await sendWhatsAppTextMessage({
         to: normalizedPhoneNumber,
         body: "⚠️ Nao encontrei nenhuma conta do KIP vinculada a este numero. Cadastre seu WhatsApp no perfil do app para continuar.",
@@ -2301,6 +2474,36 @@ export async function handleIncomingWhatsAppMessage(message) {
         client,
       });
       return true;
+    }
+
+    const contact = { ...contactRecord, reply_to: normalizedPhoneNumber };
+    const rateLimit = await registerInboundMessage(normalizedPhoneNumber);
+
+    if (!rateLimit.allowed) {
+      console.warn("[WhatsApp flood guard] message rate limited", {
+        userId: contact.user_id,
+        messageId: message?.id || null,
+        scope: rateLimit.scope,
+        notified: rateLimit.notify,
+      });
+
+      if (rateLimit.notify) {
+        try {
+          await sendWhatsAppTextMessage({
+            to: contact.reply_to,
+            body: buildRateLimitMessage(rateLimit.retryAfterSeconds),
+            userId: contact.user_id,
+            contactId: contact.contact_id,
+            relatedMessageId: message?.id || null,
+            client,
+          });
+        } catch (noticeError) {
+          // Nao cai no fallback generico: evita mandar mais mensagens a quem esta em flood.
+          console.error("[WhatsApp flood guard] rate limit notice failed:", noticeError.message);
+        }
+      }
+
+      return ASSISTANT_RESULT.RATE_LIMITED;
     }
 
     const inboundAt = getDateFromWhatsAppTimestamp(message?.timestamp) || new Date();
@@ -2326,8 +2529,13 @@ export async function handleIncomingWhatsAppMessage(message) {
     );
 
     if (!messageText) {
+      if (!(await shouldSendUnsupportedNotice(normalizedPhoneNumber))) {
+        return ASSISTANT_RESULT.IGNORED;
+      }
+
       await replyAndPersistSession({
         contact,
+        progress,
         messageId: message?.id || null,
         inboundAt,
         session,
@@ -2342,8 +2550,13 @@ export async function handleIncomingWhatsAppMessage(message) {
     }
 
     if (!contact.opted_in) {
+      if (!(await shouldSendOptInNotice(normalizedPhoneNumber))) {
+        return ASSISTANT_RESULT.IGNORED;
+      }
+
       await replyAndPersistSession({
         contact,
+        progress,
         messageId: message?.id || null,
         inboundAt,
         session,
@@ -2359,9 +2572,29 @@ export async function handleIncomingWhatsAppMessage(message) {
       return true;
     }
 
+    const { maxMessageLength } = getWhatsAppFloodGuardConfig();
+
+    if (messageText.length > maxMessageLength) {
+      await replyAndPersistSession({
+        contact,
+        progress,
+        messageId: message?.id || null,
+        inboundAt,
+        session,
+        currentIntent: session.current_intent,
+        currentStep: session.current_step,
+        pendingQuestion: session.pending_question,
+        slotState: session.slot_state_json || {},
+        replyText: `✂️ Sua mensagem e muito longa. Envie ate ${maxMessageLength} caracteres por mensagem.`,
+        client,
+      });
+      return true;
+    }
+
     if (CANCEL_PATTERN.test(messageText)) {
       await replyAndPersistSession({
         contact,
+        progress,
         messageId: message?.id || null,
         inboundAt,
         session,
@@ -2379,6 +2612,7 @@ export async function handleIncomingWhatsAppMessage(message) {
     if (HELP_PATTERN.test(messageText)) {
       await replyAndPersistSession({
         contact,
+        progress,
         messageId: message?.id || null,
         inboundAt,
         session,
@@ -2470,6 +2704,7 @@ export async function handleIncomingWhatsAppMessage(message) {
     if (normalizedIntent.intent === "help") {
       await replyAndPersistSession({
         contact,
+        progress,
         messageId: message?.id || null,
         inboundAt,
         session,
@@ -2487,6 +2722,7 @@ export async function handleIncomingWhatsAppMessage(message) {
     if (normalizedIntent.intent === "unknown") {
       await replyAndPersistSession({
         contact,
+        progress,
         messageId: message?.id || null,
         inboundAt,
         session,
@@ -2504,6 +2740,7 @@ export async function handleIncomingWhatsAppMessage(message) {
     if (validation.validationMessage) {
       await replyAndPersistSession({
         contact,
+        progress,
         messageId: message?.id || null,
         inboundAt,
         session,
@@ -2529,6 +2766,7 @@ export async function handleIncomingWhatsAppMessage(message) {
 
       await replyAndPersistSession({
         contact,
+        progress,
         messageId: message?.id || null,
         inboundAt,
         session,
@@ -2551,9 +2789,11 @@ export async function handleIncomingWhatsAppMessage(message) {
       sessionContext: pickConversationContext(slotState),
       validation,
     });
+    progress.executedReplyText = execution.message;
 
     await replyAndPersistSession({
       contact,
+      progress,
       messageId: message?.id || null,
       inboundAt,
       session,
@@ -2569,10 +2809,21 @@ export async function handleIncomingWhatsAppMessage(message) {
   } catch (error) {
     console.error("WhatsApp assistant error:", error);
 
+    // Ja respondemos: nao manda uma segunda mensagem (custo e confusao).
+    if (progress.replied) {
+      return false;
+    }
+
+    // A acao ja foi feita; dizer "nao consegui" levaria o usuario a repetir e
+    // duplicar o lancamento. Envia o resultado real.
+    const fallbackBody =
+      progress.executedReplyText ||
+      "⚠️ Nao consegui concluir sua solicitacao agora. Tente novamente em instantes.";
+
     try {
       await sendWhatsAppTextMessage({
         to: normalizedPhoneNumber,
-        body: "⚠️ Nao consegui concluir sua solicitacao agora. Tente novamente em instantes.",
+        body: fallbackBody,
         relatedMessageId: message?.id || null,
         client,
       });
@@ -2584,3 +2835,17 @@ export async function handleIncomingWhatsAppMessage(message) {
     client.release();
   }
 }
+
+// Exposto apenas para testes automatizados (backend/test). Nao usar em codigo de producao.
+export const __testing = {
+  buildCommandIntent,
+  buildHeuristicIntent,
+  buildDateRangeFromPeriodText,
+  buildValidationResult,
+  findByName,
+  getCurrentMonthRange,
+  getCurrentWeekRange,
+  getRecentItemByReference,
+  parseLocaleAmount,
+  parseRelativeDateText,
+};

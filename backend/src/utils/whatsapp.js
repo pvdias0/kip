@@ -39,10 +39,12 @@ function uniqueValues(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function buildBrazilianPhoneVariants(digits) {
+export const WHATSAPP_TEXT_MAX_LENGTH = 4096;
+const META_REQUEST_TIMEOUT_MS = 15_000;
+
+/** Variantes com/sem o nono digito para um numero nacional BR (DDD + numero). */
+function buildBrazilianNationalVariants(nationalDigits) {
   const variants = [];
-  const hasCountryCode = digits.startsWith("55");
-  const nationalDigits = hasCountryCode ? digits.slice(2) : digits;
 
   if (nationalDigits.length === 10) {
     variants.push(`${nationalDigits.slice(0, 2)}9${nationalDigits.slice(2)}`);
@@ -52,34 +54,92 @@ function buildBrazilianPhoneVariants(digits) {
     variants.push(`${nationalDigits.slice(0, 2)}${nationalDigits.slice(3)}`);
   }
 
-  if (hasCountryCode) {
-    return variants.map((value) => `55${value}`);
-  }
-
   return variants;
 }
 
-function buildWhatsAppPhoneNumberCandidates(input) {
-  const digits = normalizePhoneDigits(input);
+/**
+ * Regras:
+ * - Comeca com "+" ou `international: true` (wa_id vindo da Meta): os digitos ja
+ *   incluem o DDI. Variantes do nono digito so para numeros +55.
+ * - Sem "+" e com 10-11 digitos: numero nacional brasileiro (DDD + numero),
+ *   inclusive DDD 55. Numeros estrangeiros digitados pelo usuario precisam de "+".
+ * - Sem "+" e com 12-15 digitos: ja inclui o DDI.
+ */
+function buildWhatsAppPhoneNumberCandidates(input, { international = false } = {}) {
+  const rawInput = String(input ?? "").trim();
+  const digits = normalizePhoneDigits(rawInput);
 
   if (digits.length < 10 || digits.length > 15) {
     return [];
   }
 
-  const brazilianVariants = buildBrazilianPhoneVariants(digits);
+  const hasExplicitCountryCode =
+    international || rawInput.startsWith("+") || digits.length >= 12;
 
-  if (digits.length <= 11 && !digits.startsWith("55")) {
-    return uniqueValues(
-      [`+55${digits}`, ...brazilianVariants.map((value) => `+55${value}`), `+${digits}`],
-    );
+  if (!hasExplicitCountryCode) {
+    return uniqueValues([
+      `+55${digits}`,
+      ...buildBrazilianNationalVariants(digits).map((value) => `+55${value}`),
+    ]);
   }
 
-  return uniqueValues([`+${digits}`, ...brazilianVariants.map((value) => `+${value}`)]);
+  if (!digits.startsWith("55")) {
+    return [`+${digits}`];
+  }
+
+  return uniqueValues([
+    `+${digits}`,
+    ...buildBrazilianNationalVariants(digits.slice(2)).map((value) => `+55${value}`),
+  ]);
 }
 
+/** Numero digitado pelo usuario (perfil) ou ja em E.164 ("+..."). */
 export function normalizeWhatsAppPhoneNumber(input) {
   return buildWhatsAppPhoneNumberCandidates(input)[0] || null;
 }
+
+/** wa_id / recipient_id enviados pela Meta: sempre com DDI, sem "+". */
+export function normalizeWhatsAppIdToE164(waId) {
+  return buildWhatsAppPhoneNumberCandidates(waId, { international: true })[0] || null;
+}
+
+/** Garante o limite de 4096 caracteres da Cloud API, cortando em quebra de linha. */
+export function fitWhatsAppTextBody(body) {
+  const text = String(body ?? "");
+
+  if (text.length <= WHATSAPP_TEXT_MAX_LENGTH) {
+    return text;
+  }
+
+  const suffix = "\n… (mensagem resumida)";
+  const limit = WHATSAPP_TEXT_MAX_LENGTH - suffix.length;
+  const slice = text.slice(0, limit);
+  const lastBreak = slice.lastIndexOf("\n");
+  const cut = lastBreak > limit * 0.5 ? slice.slice(0, lastBreak) : slice;
+
+  return `${cut}${suffix}`;
+}
+
+/**
+ * Ordem dos status de mensagens enviadas. Webhooks da Meta podem chegar fora de
+ * ordem (ex.: "read" antes de "delivered"); um status so substitui outro de
+ * posicao igual ou maior.
+ */
+function outgoingStatusRankSql(expression) {
+  return `(CASE ${expression}
+    WHEN 'failed' THEN 4
+    WHEN 'read' THEN 3
+    WHEN 'delivered' THEN 2
+    WHEN 'sent' THEN 1
+    ELSE 0
+  END)`;
+}
+
+const OUTGOING_STATUS_UPSERT_SQL = `status = CASE
+          WHEN ${outgoingStatusRankSql("EXCLUDED.status")} >= ${outgoingStatusRankSql("whatsapp_messages.status")}
+          THEN EXCLUDED.status
+          ELSE whatsapp_messages.status
+        END`;
 
 export async function syncWhatsAppChannelConfig(client = pool) {
   const config = getWhatsAppConfig();
@@ -398,6 +458,33 @@ export async function claimIncomingMessageForAssistant(
   return Boolean(result.rows[0]?.id);
 }
 
+/**
+ * Mensagens ficam em "processing" so na memoria do processo; se o servidor
+ * reiniciar no meio, nunca saem desse estado. Marca como "failed" as antigas.
+ * Nao reprocessa: a resposta pode ja ter sido enviada.
+ */
+export async function recoverStaleProcessingMessages(
+  { olderThanMinutes = 10 } = {},
+  client = pool,
+) {
+  const result = await client.query(
+    `
+      UPDATE whatsapp_messages
+      SET
+        status = 'failed',
+        error_message = 'Processamento interrompido (reinicio do servidor)',
+        updated_at = NOW()
+      WHERE direction = 'incoming'
+        AND status = 'processing'
+        AND updated_at < NOW() - make_interval(mins => $1::int)
+      RETURNING id
+    `,
+    [olderThanMinutes],
+  );
+
+  return result.rows.length;
+}
+
 export async function markIncomingMessageAssistantStatus(
   metaMessageId,
   status,
@@ -481,7 +568,7 @@ export async function sendWhatsAppTextMessage(
     type: "text",
     text: {
       preview_url: false,
-      body,
+      body: fitWhatsAppTextBody(body),
     },
   };
 
@@ -494,6 +581,7 @@ export async function sendWhatsAppTextMessage(
         "Content-Type": "application/json",
       },
       body: JSON.stringify(requestPayload),
+      signal: AbortSignal.timeout(META_REQUEST_TIMEOUT_MS),
     },
   );
 
@@ -533,11 +621,11 @@ export async function sendWhatsAppTextMessage(
       DO UPDATE SET
         user_id = COALESCE(EXCLUDED.user_id, whatsapp_messages.user_id),
         contact_id = COALESCE(EXCLUDED.contact_id, whatsapp_messages.contact_id),
-        status = EXCLUDED.status,
+        ${OUTGOING_STATUS_UPSERT_SQL},
         phone_number = EXCLUDED.phone_number,
         related_message_id = COALESCE(EXCLUDED.related_message_id, whatsapp_messages.related_message_id),
         payload = EXCLUDED.payload,
-        raw_event = EXCLUDED.raw_event,
+        raw_event = COALESCE(whatsapp_messages.raw_event, EXCLUDED.raw_event),
         sent_at = COALESCE(whatsapp_messages.sent_at, EXCLUDED.sent_at),
         updated_at = NOW()
     `,
@@ -563,7 +651,7 @@ export function getDateFromWhatsAppTimestamp(value) {
 }
 
 async function saveIncomingMessage(message, changeValue, client = pool) {
-  const normalizedPhoneNumber = normalizeWhatsAppPhoneNumber(message.from);
+  const normalizedPhoneNumber = normalizeWhatsAppIdToE164(message.from);
   const linkedContact = await findContactByPhoneNumber(normalizedPhoneNumber, client);
 
   await client.query(
@@ -593,7 +681,7 @@ async function saveIncomingMessage(message, changeValue, client = pool) {
         type = EXCLUDED.type,
         status = CASE
           WHEN whatsapp_messages.direction = 'incoming'
-            AND whatsapp_messages.status IN ('processing', 'processed', 'failed')
+            AND whatsapp_messages.status IN ('processing', 'processed', 'failed', 'ignored', 'rate_limited')
           THEN whatsapp_messages.status
           ELSE EXCLUDED.status
         END,
@@ -639,7 +727,7 @@ async function saveIncomingMessage(message, changeValue, client = pool) {
 }
 
 async function saveMessageStatus(status, changeValue, client = pool) {
-  const normalizedPhoneNumber = normalizeWhatsAppPhoneNumber(status.recipient_id);
+  const normalizedPhoneNumber = normalizeWhatsAppIdToE164(status.recipient_id);
   const linkedContact = await findContactByPhoneNumber(normalizedPhoneNumber, client);
   const deliveredAt = status.status === "delivered"
     ? toDateFromUnixTimestamp(status.timestamp)
@@ -671,20 +759,28 @@ async function saveMessageStatus(status, changeValue, client = pool) {
         read_at,
         failed_at,
         error_message,
+        pricing_billable,
+        pricing_category,
+        pricing_type,
+        pricing_model,
         updated_at
       )
       VALUES (
-        $1, $2, 'outgoing', COALESCE($3, 'text'), $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11, $12, $13, NOW()
+        $1, $2, 'outgoing', COALESCE($3, 'text'), $4, $5, $6, $7::jsonb, $8::jsonb, $9, $10, $11, $12, $13,
+        $14, $15, $16, $17, NOW()
       )
       ON CONFLICT (meta_message_id)
       DO UPDATE SET
         user_id = COALESCE(whatsapp_messages.user_id, EXCLUDED.user_id),
         contact_id = COALESCE(whatsapp_messages.contact_id, EXCLUDED.contact_id),
-        type = COALESCE(EXCLUDED.type, whatsapp_messages.type),
-        status = EXCLUDED.status,
+        ${OUTGOING_STATUS_UPSERT_SQL},
         phone_number = COALESCE(EXCLUDED.phone_number, whatsapp_messages.phone_number),
-        payload = EXCLUDED.payload,
+        -- payload guarda o que foi enviado; o ultimo evento de status fica em raw_event.
         raw_event = EXCLUDED.raw_event,
+        pricing_billable = COALESCE(EXCLUDED.pricing_billable, whatsapp_messages.pricing_billable),
+        pricing_category = COALESCE(EXCLUDED.pricing_category, whatsapp_messages.pricing_category),
+        pricing_type = COALESCE(EXCLUDED.pricing_type, whatsapp_messages.pricing_type),
+        pricing_model = COALESCE(EXCLUDED.pricing_model, whatsapp_messages.pricing_model),
         sent_at = COALESCE(EXCLUDED.sent_at, whatsapp_messages.sent_at),
         delivered_at = COALESCE(EXCLUDED.delivered_at, whatsapp_messages.delivered_at),
         read_at = COALESCE(EXCLUDED.read_at, whatsapp_messages.read_at),
@@ -706,6 +802,10 @@ async function saveMessageStatus(status, changeValue, client = pool) {
       readAt,
       failedAt,
       status.errors?.[0]?.title || status.errors?.[0]?.message || null,
+      typeof status.pricing?.billable === "boolean" ? status.pricing.billable : null,
+      status.pricing?.category || null,
+      status.pricing?.type || null,
+      status.pricing?.pricing_model || null,
     ],
   );
 }

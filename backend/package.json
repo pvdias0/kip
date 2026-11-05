@@ -4,10 +4,11 @@
   "description": "Backend para Organizador Financeiro KIP",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test \"test/**/*.test.js\"",
     "start": "node bootstrap.js",
     "dev": "node --watch bootstrap.js",
-    "migrate": "node src/scripts/run-migrations.js"
+    "migrate": "node src/scripts/run-migrations.js",
+    "whatsapp:diagnose": "node src/scripts/whatsapp-diagnose.js"
   },
   "keywords": [],
   "author": "",

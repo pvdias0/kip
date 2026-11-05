@@ -103,6 +103,14 @@ export const verifyWhatsAppWebhook = async (req, res) => {
     });
   }
 
+  if (!config.webhookVerifyToken) {
+    console.error("[WhatsApp webhook] verification rejected: missing WHATSAPP_WEBHOOK_VERIFY_TOKEN");
+    return res.status(503).json({
+      status: "ERROR",
+      message: "Webhook do WhatsApp indisponivel por configuracao incompleta",
+    });
+  }
+
   if (verifyToken !== config.webhookVerifyToken) {
     return res.status(403).json({
       status: "ERROR",
@@ -178,14 +186,22 @@ export const receiveWhatsAppWebhook = async (req, res) => {
 
             try {
               const handled = await handleIncomingWhatsAppMessage(message);
+              // true -> processed, false -> failed, string -> status especifico
+              // (ex.: "ignored", "rate_limited" vindos do flood guard).
+              const assistantStatus =
+                typeof handled === "string"
+                  ? handled
+                  : handled
+                    ? "processed"
+                    : "failed";
 
               if (messageId) {
                 await markIncomingMessageAssistantStatus(
                   messageId,
-                  handled ? "processed" : "failed",
-                  handled
-                    ? null
-                    : "Falha ao processar mensagem no assistente",
+                  assistantStatus,
+                  assistantStatus === "failed"
+                    ? "Falha ao processar mensagem no assistente"
+                    : null,
                   pool,
                 );
               }
@@ -251,7 +267,21 @@ export const getWhatsAppChannelStatus = async (req, res) => {
         SELECT
           (SELECT COUNT(*) FROM user_whatsapp_contacts) AS contacts_count,
           (SELECT COUNT(*) FROM whatsapp_messages) AS messages_count,
-          (SELECT COUNT(*) FROM whatsapp_webhook_events) AS webhook_events_count
+          (SELECT COUNT(*) FROM whatsapp_webhook_events) AS webhook_events_count,
+          (
+            SELECT COUNT(*)
+            FROM whatsapp_messages
+            WHERE direction = 'outgoing'
+              AND pricing_billable = TRUE
+              AND sent_at >= date_trunc('month', NOW())
+          ) AS billable_messages_this_month,
+          (
+            SELECT COUNT(*)
+            FROM whatsapp_messages
+            WHERE direction = 'outgoing'
+              AND status IN ('delivered', 'read')
+              AND sent_at >= date_trunc('month', NOW())
+          ) AS delivered_messages_this_month
       `,
     );
 
