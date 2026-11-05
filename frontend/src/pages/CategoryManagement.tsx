@@ -82,7 +82,7 @@ export default function CategoryManagement() {
   return (
     <AppShell
       title="Categorias"
-      subtitle="Gerencie suas categorias de transacoes"
+      subtitle="Gerencie suas categorias de transações"
     >
       <div className="mx-auto flex w-full max-w-2xl flex-1 px-3 py-6 sm:px-4 sm:py-8">
         <div className="w-full">

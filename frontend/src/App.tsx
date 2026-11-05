@@ -6,7 +6,11 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ClarityTracker } from "@/components/analytics/ClarityTracker";
-import Index from "./pages/Index";
+import { EntrySheetProvider } from "@/components/entry/EntrySheetProvider";
+import Home from "./pages/Home";
+import Statement from "./pages/Statement";
+import Wallet from "./pages/Wallet";
+import More from "./pages/More";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -17,27 +21,32 @@ import Profile from "./pages/Profile";
 import WhatsAppSettings from "./pages/WhatsAppSettings";
 import CategoryManagement from "./pages/CategoryManagement";
 import PaymentMethodManagement from "./pages/PaymentMethodManagement";
-import PaymentAccountManagement from "./pages/PaymentAccountManagement";
 import LegalConsent from "./pages/LegalConsent";
 import LegalDocumentPage from "./pages/LegalDocumentPage";
 import Landing from "./pages/Landing";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
+});
+
+function FullScreenLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="space-y-4 text-center">
+        <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="text-muted-foreground">Carregando…</p>
+      </div>
+    </div>
+  );
+}
 
 // Protected route component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader />;
   }
 
   if (!isAuthenticated) {
@@ -56,14 +65,7 @@ function AuthRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader />;
   }
 
   if (isAuthenticated) {
@@ -83,21 +85,14 @@ function HomeRoute() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader />;
   }
 
   if (isAuthenticated) {
     if (!user?.has_accepted_legal_documents) {
       return <Navigate to="/legal/consent" replace />;
     }
-    return <Index />;
+    return <Home />;
   }
 
   return <Landing />;
@@ -107,14 +102,7 @@ function LegalConsentRoute() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader />;
   }
 
   if (!isAuthenticated) {
@@ -176,38 +164,15 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/categories"
-        element={
-          <ProtectedRoute>
-            <CategoryManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/payment-methods"
-        element={
-          <ProtectedRoute>
-            <PaymentMethodManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/payment-accounts"
-        element={
-          <ProtectedRoute>
-            <PaymentAccountManagement />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/extrato" element={<ProtectedRoute><Statement /></ProtectedRoute>} />
+      <Route path="/carteira" element={<ProtectedRoute><Wallet /></ProtectedRoute>} />
+      <Route path="/relatorios" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/mais" element={<ProtectedRoute><More /></ProtectedRoute>} />
+      <Route path="/categories" element={<ProtectedRoute><CategoryManagement /></ProtectedRoute>} />
+      <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethodManagement /></ProtectedRoute>} />
+      {/* enderecos antigos */}
+      <Route path="/dashboard" element={<Navigate to="/relatorios" replace />} />
+      <Route path="/payment-accounts" element={<Navigate to="/carteira" replace />} />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -223,7 +188,9 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <ClarityTracker />
-            <AppRoutes />
+            <EntrySheetProvider>
+              <AppRoutes />
+            </EntrySheetProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

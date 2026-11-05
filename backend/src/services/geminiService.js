@@ -6,6 +6,9 @@ const INTENTS = [
   "help",
   "unknown",
   "get_entries",
+  "get_balance",
+  "get_cards",
+  "get_debts",
   "create_entry",
   "update_entry",
   "delete_entry",
@@ -122,6 +125,9 @@ Intents suportadas:
 - help
 - unknown
 - get_entries
+- get_balance
+- get_cards
+- get_debts
 - create_entry
 - update_entry
 - delete_entry
@@ -166,6 +172,11 @@ Regras por intent:
   - se houver periodo claro, preencha start_date e end_date em YYYY-MM-DD.
   - se o usuario disser hoje, semana, mes atual ou mes especifico, converta para datas.
   - type pode ser null quando quiser todas as transacoes.
+- Para get_balance, get_cards e get_debts (nenhum slot e necessario):
+  - get_balance: saldo atual das contas, quanto dinheiro o usuario tem, patrimonio, visao geral.
+  - get_cards: fatura do cartao de credito, limite disponivel, quando fecha ou vence a fatura.
+  - get_debts: dividas, emprestimos, financiamentos, parcelas restantes, "quanto eu devo".
+  - Se o usuario pedir saldo/resultado de um periodo especifico ("saldo deste mes", "quanto gastei em outubro"), use get_entries.
 - Para categorias:
   - create_category usa category_name.
   - update_category usa category_name para a categoria atual e new_name para o novo nome.

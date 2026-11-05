@@ -31,6 +31,13 @@ import {
   updatePaymentMethodForUser,
 } from "./paymentCatalogService.js";
 import { interpretWhatsAppIntent } from "./geminiService.js";
+import { getFinanceOverview, getLocalToday } from "./financeService.js";
+import {
+  FINANCE_INTENTS,
+  detectFinanceQuestion,
+  formatFinanceReply,
+  matchFinanceCommand,
+} from "./whatsappFinanceReplies.js";
 import {
   closeWhatsAppSession,
   getWhatsAppSessionByUserId,
@@ -264,7 +271,8 @@ function buildHelpMessage() {
     "",
     "📌 *Voce pode me pedir:*",
     "• registrar, editar e excluir transacoes",
-    "• consultar saldo e gastos por periodo",
+    "• consultar saldo das contas, faturas e dividas",
+    "• consultar gastos por periodo",
     "• criar, listar, editar e excluir categorias",
     "• criar, listar, editar e excluir formas de pagamento",
     "• criar, listar, editar e excluir contas de pagamento",
@@ -272,6 +280,7 @@ function buildHelpMessage() {
     "💬 *Exemplos:*",
     '• "gastei 100 reais em gasolina hoje no pix"',
     '• "quero ver meus gastos deste mes"',
+    '• "qual meu saldo?" ou "quanto devo?"',
     '• "delete essa transacao"',
     '• "crie a categoria lazer"',
     '• "renomeie a forma de pagamento pix para pix pessoal"',
@@ -289,6 +298,7 @@ function buildUnknownMessage() {
     "",
     "💡 *Exemplos rapidos:*",
     '• "quero ver meus gastos de hoje"',
+    '• "saldo", "faturas" ou "dividas"',
     '• "delete essa transacao"',
     '• "crie a categoria viagem"',
     '• "liste minhas formas de pagamento"',
@@ -385,6 +395,18 @@ function buildCommandIntent(messageText, referenceDate = new Date()) {
       },
       missing_fields: [],
       notes: "command:mes",
+    };
+  }
+
+  const financeCommand = matchFinanceCommand(messageText);
+
+  if (financeCommand) {
+    return {
+      intent: financeCommand,
+      confidence: 1,
+      slots: baseSlots,
+      missing_fields: [],
+      notes: `command:${financeCommand}`,
     };
   }
 
@@ -1073,6 +1095,19 @@ function buildHeuristicIntent(messageText, session, referenceDate = new Date()) 
     };
   }
 
+  // "qual meu saldo?", "quanto devo?", "como esta a fatura?" (sem periodo).
+  const financeIntent = periodRange ? null : detectFinanceQuestion(messageText);
+
+  if (financeIntent) {
+    return {
+      intent: financeIntent,
+      confidence: 0.9,
+      slots: baseSlots,
+      missing_fields: [],
+      notes: `heuristic:${financeIntent}`,
+    };
+  }
+
   return null;
 }
 
@@ -1519,7 +1554,8 @@ function buildRichHelpMessage() {
     "",
     "📌 *Voce pode me pedir:*",
     "• registrar, editar e excluir transacoes",
-    "• consultar saldo e gastos por periodo",
+    "• consultar saldo das contas, faturas e dividas",
+    "• consultar gastos por periodo",
     "• criar, listar, editar e excluir categorias",
     "• criar, listar, editar e excluir formas de pagamento",
     "• criar, listar, editar e excluir contas de pagamento",
@@ -1527,6 +1563,7 @@ function buildRichHelpMessage() {
     "💬 *Exemplos:*",
     '• "gastei 100 reais em gasolina hoje no pix"',
     '• "quero ver meus gastos deste mes"',
+    '• "qual meu saldo?" ou "quanto devo?"',
     '• "delete essa transacao"',
     '• "crie a categoria lazer"',
     '• "renomeie a forma de pagamento pix para pix pessoal"',
@@ -1540,10 +1577,11 @@ function buildFriendlyUnknownMessage() {
   return [
     "🤔 *Nao consegui identificar essa acao no KIP.*",
     "",
-    "Eu consigo te ajudar com transacoes, categorias, formas de pagamento e contas.",
+    "Eu consigo te ajudar com transacoes, saldo, faturas, dividas, categorias, formas de pagamento e contas.",
     "",
     "💡 *Exemplos rapidos:*",
     '• "quero ver meus gastos de hoje"',
+    '• "saldo", "faturas" ou "dividas"',
     '• "delete essa transacao"',
     '• "crie a categoria viagem"',
     '• "liste minhas formas de pagamento"',
@@ -1901,6 +1939,20 @@ async function executeIntent({
   sessionContext,
   validation,
 }) {
+  if (FINANCE_INTENTS.includes(intent)) {
+    const overview = await getFinanceOverview(
+      contact.user_id,
+      { today: getLocalToday() },
+      client,
+    );
+
+    return {
+      message: formatFinanceReply(intent, overview),
+      closeSession: true,
+      nextSlotState: preserveConversationContext(sessionContext),
+    };
+  }
+
   if (intent === "get_entries") {
     const maxEntries = getWhatsAppConfig().assistantMaxEntries;
     const [summary, entries] = await Promise.all([
@@ -2842,6 +2894,7 @@ export const __testing = {
   buildHeuristicIntent,
   buildDateRangeFromPeriodText,
   buildValidationResult,
+  executeIntent,
   findByName,
   getCurrentMonthRange,
   getCurrentWeekRange,

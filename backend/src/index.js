@@ -20,6 +20,7 @@ import entriesRoutes from "./routes/entries.js";
 import paymentMethodsRoutes from "./routes/paymentMethods.js";
 import passwordResetRoutes from "./routes/passwordReset.js";
 import whatsappRoutes from "./routes/whatsapp.js";
+import financeRoutes from "./routes/finance.js";
 import { isWhatsAppConfigured } from "./config/whatsapp.js";
 import {
   recoverStaleProcessingMessages,
@@ -152,6 +153,7 @@ app.use("/api/categories", categoriesRoutes);
 app.use("/api/entries", entriesRoutes);
 app.use("/api/payment-methods", paymentMethodsRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
+app.use("/api/finance", financeRoutes);
 
 const frontendPath = path.join(__dirname, "../../frontend/dist");
 const frontendEntryPoint = path.join(frontendPath, "index.html");

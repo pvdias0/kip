@@ -202,7 +202,7 @@ export default function PaymentMethodManagement() {
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="outline"
-              onClick={() => navigate("/payment-accounts")}
+              onClick={() => navigate("/carteira")}
               className="gap-2"
             >
               <Landmark className="h-4 w-4" />
@@ -413,7 +413,7 @@ export default function PaymentMethodManagement() {
                       type="button"
                       variant="outline"
                       className="gap-2"
-                      onClick={() => navigate("/payment-accounts")}
+                      onClick={() => navigate("/carteira")}
                     >
                       <Landmark className="h-4 w-4" />
                       Gerenciar contas

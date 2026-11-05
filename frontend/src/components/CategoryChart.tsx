@@ -205,8 +205,8 @@ export function CategoryChart({
                 data={chartData}
                 cx="50%"
                 cy="50%"
-                innerRadius={55}
-                outerRadius={85}
+                innerRadius="68%"
+                outerRadius="96%"
                 startAngle={90}
                 endAngle={-270}
                 paddingAngle={piePaddingAngle}
@@ -243,7 +243,7 @@ export function CategoryChart({
                 Total
               </p>
               <p className={cn(
-                "text-lg sm:text-xl font-bold number-highlight",
+                "max-w-[8.5rem] text-base font-bold leading-tight number-highlight sm:max-w-[10rem] sm:text-lg",
                 type === "income" ? "text-income" : "text-expense"
               )}>
                 {formatCurrency(total)}

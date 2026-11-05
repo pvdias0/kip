@@ -67,7 +67,7 @@ export default function Profile() {
         }
 
         setProfileError(
-          error instanceof Error ? error.message : "Nao foi possivel carregar seu perfil.",
+          error instanceof Error ? error.message : "Não foi possível carregar seu perfil.",
         );
       } finally {
         if (mounted) {
@@ -104,7 +104,7 @@ export default function Profile() {
       setProfileMessage(response.message || "Perfil atualizado com sucesso.");
     } catch (error) {
       setProfileError(
-        error instanceof Error ? error.message : "Nao foi possivel atualizar o perfil.",
+        error instanceof Error ? error.message : "Não foi possível atualizar o perfil.",
       );
     } finally {
       setIsSavingProfile(false);
@@ -130,7 +130,7 @@ export default function Profile() {
       setPasswordMessage(response.message || "Senha atualizada com sucesso.");
     } catch (error) {
       setPasswordError(
-        error instanceof Error ? error.message : "Nao foi possivel atualizar a senha.",
+        error instanceof Error ? error.message : "Não foi possível atualizar a senha.",
       );
     } finally {
       setIsSavingPassword(false);
@@ -164,7 +164,7 @@ export default function Profile() {
                 </Avatar>
                 <div className="space-y-2">
                   <CardTitle className="text-2xl font-display">
-                    {profile?.name || "Usuario"}
+                    {profile?.name || "Usuário"}
                   </CardTitle>
                   <CardDescription>{profile?.email}</CardDescription>
                 </div>
@@ -186,7 +186,7 @@ export default function Profile() {
                 <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
                   <p className="text-sm font-medium text-foreground">Importante</p>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Se voce alterar o email, sera necessario confirmar o novo endereco antes de entrar novamente.
+                    Se você alterar o email, será necessário confirmar o novo endereço antes de entrar novamente.
                   </p>
                 </div>
               </CardContent>
@@ -200,7 +200,7 @@ export default function Profile() {
                     Dados do perfil
                   </CardTitle>
                   <CardDescription>
-                    Defina como voce quer ser identificado dentro do app.
+                    Defina como você quer ser identificado dentro do app.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">

@@ -35,7 +35,7 @@ export default function LegalConsent() {
     setError(null);
 
     if (!legalAccepted) {
-      setError("Voce precisa aceitar os Termos de Servico e a Politica de Privacidade para continuar.");
+      setError("Você precisa aceitar os Termos de Serviço e a Política de Privacidade para continuar.");
       return;
     }
 
@@ -55,7 +55,7 @@ export default function LegalConsent() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Nao foi possivel registrar o aceite.",
+          : "Não foi possível registrar o aceite.",
       );
     } finally {
       setIsSubmitting(false);
@@ -83,8 +83,8 @@ export default function LegalConsent() {
                 Libere o acesso da sua conta
               </CardTitle>
               <CardDescription className="text-sm leading-6">
-                Identificamos que sua conta ainda nao registrou o aceite da
-                Politica de Privacidade e dos Termos de Servico vigentes. O uso
+                Identificamos que sua conta ainda não registrou o aceite da
+                Política de Privacidade e dos Termos de Serviço vigentes. O uso
                 do sistema permanece bloqueado ate a confirmacao.
               </CardDescription>
             </div>
