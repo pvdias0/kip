@@ -15,9 +15,6 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import heroDesktop from "../../assets/lp-desktop.png";
-import heroTablet from "../../assets/lp-tablet.png";
-import heroMobile from "../../assets/lp-mobile.png";
 
 const Landing = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -26,6 +23,18 @@ const Landing = () => {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+        delayChildren: 0.2,
+      },
+    },
+  };
+
+  // O container do hero nao anima a propria opacidade: a imagem de fundo e o
+  // elemento LCP e precisa aparecer imediatamente. So os filhos animam.
+  const heroContainerVariants = {
+    hidden: {},
+    visible: {
       transition: {
         staggerChildren: 0.1,
         delayChildren: 0.2,
@@ -147,13 +156,16 @@ const Landing = () => {
             <div className="md:hidden flex items-center gap-2">
               <ThemeToggle />
               <button
+                type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="p-2"
+                aria-label={isMobileMenuOpen ? "Fechar menu" : "Abrir menu"}
+                aria-expanded={isMobileMenuOpen}
               >
                 {isMobileMenuOpen ? (
-                  <X className="w-6 h-6" />
+                  <X className="w-6 h-6" aria-hidden="true" />
                 ) : (
-                  <Menu className="w-6 h-6" />
+                  <Menu className="w-6 h-6" aria-hidden="true" />
                 )}
               </button>
             </div>
@@ -195,29 +207,26 @@ const Landing = () => {
       {/* Hero Section */}
       <section className="relative isolate overflow-hidden">
         <motion.div
-          variants={containerVariants}
+          variants={heroContainerVariants}
           initial="hidden"
           animate="visible"
           className="relative min-h-[calc(100vh-4.5rem)] text-center"
         >
-          <div className="absolute inset-0 md:hidden">
-            <div
-              className="h-full w-full bg-cover bg-center"
-              style={{ backgroundImage: `url(${heroMobile})` }}
+          {/* Imagem de fundo do hero: <picture> com WebP para o navegador
+              descobrir cedo (preload no index.html) e baixar so a versao do breakpoint. */}
+          <picture className="absolute inset-0">
+            <source media="(min-width: 1024px)" srcSet="/hero/lp-desktop.webp" />
+            <source media="(min-width: 768px)" srcSet="/hero/lp-tablet.webp" />
+            <img
+              src="/hero/lp-mobile.webp"
+              alt=""
+              width={828}
+              height={1471}
+              fetchPriority="high"
+              decoding="async"
+              className="h-full w-full object-cover object-center"
             />
-          </div>
-          <div className="absolute inset-0 hidden md:block lg:hidden">
-            <div
-              className="h-full w-full bg-cover bg-center"
-              style={{ backgroundImage: `url(${heroTablet})` }}
-            />
-          </div>
-          <div className="absolute inset-0 hidden lg:block">
-            <div
-              className="h-full w-full bg-cover bg-center"
-              style={{ backgroundImage: `url(${heroDesktop})` }}
-            />
-          </div>
+          </picture>
           <div className="absolute inset-0 bg-background/35 dark:bg-background/45" />
           <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/70 to-primary/20 dark:from-background/90 dark:via-background/75 dark:to-background/35" />
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
@@ -468,9 +477,9 @@ const Landing = () => {
 
               {/* Product */}
               <div>
-                <h4 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">
+                <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">
                   Produto
-                </h4>
+                </h3>
                 <ul className="space-y-2 text-xs sm:text-sm">
                   <li>
                     <a
@@ -493,9 +502,9 @@ const Landing = () => {
 
               {/* Account */}
               <div>
-                <h4 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">
+                <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">
                   Conta
-                </h4>
+                </h3>
                 <ul className="space-y-2 text-xs sm:text-sm">
                   <li>
                     <Link
@@ -518,9 +527,9 @@ const Landing = () => {
 
               {/* Legal */}
               <div>
-                <h4 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">
+                <h3 className="font-semibold mb-3 sm:mb-4 text-sm sm:text-base">
                   Legal
-                </h4>
+                </h3>
                 <ul className="space-y-2 text-xs sm:text-sm">
                   <li>
                     <Link

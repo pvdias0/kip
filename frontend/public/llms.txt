@@ -1,0 +1,20 @@
+# KIP - Organizador Financeiro Pessoal
+
+> KIP é uma plataforma web gratuita, em português, para organizar finanças pessoais: registrar receitas e despesas, criar categorias, acompanhar contas, cartões e dívidas e visualizar relatórios em tempo real.
+
+## Recursos
+
+- Registro de receitas e despesas com data, valor, descrição e categoria
+- Categorias personalizáveis de receitas e despesas
+- Visão geral financeira: contas, cartões de crédito e dívidas
+- Relatórios e gráficos para comparar meses e identificar padrões de gastos
+- Registro de lançamentos pelo WhatsApp
+- Tema claro e escuro
+
+## Páginas
+
+- [Página inicial](https://kip.pvapps.com.br/): apresentação do KIP, recursos e como funciona
+- [Criar conta](https://kip.pvapps.com.br/register): cadastro gratuito
+- [Entrar](https://kip.pvapps.com.br/login): acesso à conta
+- [Política de Privacidade](https://kip.pvapps.com.br/privacy-policy)
+- [Termos de Serviço](https://kip.pvapps.com.br/terms-of-service)

@@ -1,13 +1,14 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, lazy, Suspense, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
-import { ResponsiveSheet } from "@/components/app/ResponsiveSheet";
-import { EntryForm } from "@/components/entry/EntryForm";
 import type { Transaction, TransactionType } from "@/types/finance";
 
 type EntrySheetContextValue = {
   openNew: (type?: TransactionType) => void;
   openEdit: (transaction: Transaction) => void;
 };
+
+// O formulario (vaul, date-fns, etc.) so e baixado quando o usuario abre a folha.
+const EntrySheet = lazy(() => import("@/components/entry/EntrySheet"));
 
 const EntrySheetContext = createContext<EntrySheetContextValue | null>(null);
 
@@ -32,15 +33,17 @@ export function EntrySheetProvider({ children }: { children: ReactNode }) {
   return (
     <EntrySheetContext.Provider value={value}>
       {children}
-      <ResponsiveSheet
-        open={state.open}
-        onOpenChange={(open) => (open ? null : close())}
-        title={state.transaction ? "Editar lançamento" : "Novo lançamento"}
-      >
-        {state.open ? (
-          <EntryForm key={state.key} transaction={state.transaction} initialType={state.type} onDone={close} />
-        ) : null}
-      </ResponsiveSheet>
+      {state.key > 0 ? (
+        <Suspense fallback={null}>
+          <EntrySheet
+            open={state.open}
+            formKey={state.key}
+            type={state.type}
+            transaction={state.transaction}
+            onClose={close}
+          />
+        </Suspense>
+      ) : null}
     </EntrySheetContext.Provider>
   );
 }

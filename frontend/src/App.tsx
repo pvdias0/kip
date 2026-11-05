@@ -7,24 +7,27 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ClarityTracker } from "@/components/analytics/ClarityTracker";
 import { EntrySheetProvider } from "@/components/entry/EntrySheetProvider";
-import Home from "./pages/Home";
-import Statement from "./pages/Statement";
-import Wallet from "./pages/Wallet";
-import More from "./pages/More";
-import Dashboard from "./pages/Dashboard";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import VerifyEmail from "./pages/VerifyEmail";
-import Profile from "./pages/Profile";
-import WhatsAppSettings from "./pages/WhatsAppSettings";
-import CategoryManagement from "./pages/CategoryManagement";
-import PaymentMethodManagement from "./pages/PaymentMethodManagement";
-import LegalConsent from "./pages/LegalConsent";
-import LegalDocumentPage from "./pages/LegalDocumentPage";
+import { lazy, Suspense } from "react";
+// Landing fica no bundle principal (primeira tela para visitantes / Google).
+// As demais paginas sao carregadas sob demanda (code splitting).
 import Landing from "./pages/Landing";
-import NotFound from "./pages/NotFound";
+const Home = lazy(() => import("./pages/Home"));
+const Statement = lazy(() => import("./pages/Statement"));
+const Wallet = lazy(() => import("./pages/Wallet"));
+const More = lazy(() => import("./pages/More"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Login = lazy(() => import("./pages/Login"));
+const Register = lazy(() => import("./pages/Register"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const Profile = lazy(() => import("./pages/Profile"));
+const WhatsAppSettings = lazy(() => import("./pages/WhatsAppSettings"));
+const CategoryManagement = lazy(() => import("./pages/CategoryManagement"));
+const PaymentMethodManagement = lazy(() => import("./pages/PaymentMethodManagement"));
+const LegalConsent = lazy(() => import("./pages/LegalConsent"));
+const LegalDocumentPage = lazy(() => import("./pages/LegalDocumentPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } },
@@ -189,7 +192,9 @@ const App = () => (
           <AuthProvider>
             <ClarityTracker />
             <EntrySheetProvider>
-              <AppRoutes />
+              <Suspense fallback={<FullScreenLoader />}>
+                <AppRoutes />
+              </Suspense>
             </EntrySheetProvider>
           </AuthProvider>
         </BrowserRouter>

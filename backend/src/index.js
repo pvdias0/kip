@@ -14,6 +14,7 @@ import {
   passwordResetLimiter,
 } from "./middleware/rateLimiter.js";
 import { initializeSocket } from "./utils/socket.js";
+import { serveSpa } from "./utils/spa.js";
 import authRoutes from "./routes/auth.js";
 import categoriesRoutes from "./routes/categories.js";
 import entriesRoutes from "./routes/entries.js";
@@ -82,10 +83,22 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https:"],
-        scriptSrc: ["'self'"],
+        // Microsoft Clarity e Cloudflare Web Analytics estavam sendo bloqueados
+        scriptSrc: [
+          "'self'",
+          "https://www.clarity.ms",
+          "https://scripts.clarity.ms",
+          "https://static.cloudflareinsights.com",
+        ],
+        connectSrc: [
+          "'self'",
+          "https://*.clarity.ms",
+          "https://c.bing.com",
+          "https://cloudflareinsights.com",
+        ],
       },
     },
     crossOriginEmbedderPolicy: false,
@@ -159,10 +172,7 @@ const frontendPath = path.join(__dirname, "../../frontend/dist");
 const frontendEntryPoint = path.join(frontendPath, "index.html");
 
 if (existsSync(frontendEntryPoint)) {
-  app.use(express.static(frontendPath));
-  app.use((req, res) => {
-    res.sendFile(frontendEntryPoint);
-  });
+  serveSpa(app, frontendPath);
 }
 
 app.use(errorHandler);
