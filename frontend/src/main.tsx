@@ -1,13 +1,8 @@
 import { createRoot } from "react-dom/client";
-// Fontes auto-hospedadas (subset latin, cobre portugues). Evita a cadeia
-// render-blocking CSS -> fonts.googleapis.com -> fonts.gstatic.com.
-import "@fontsource/inter/latin-400.css";
-import "@fontsource/inter/latin-500.css";
-import "@fontsource/inter/latin-600.css";
-import "@fontsource/inter/latin-700.css";
-import "@fontsource/outfit/latin-500.css";
-import "@fontsource/outfit/latin-600.css";
-import "@fontsource/outfit/latin-700.css";
+// Fontes auto-hospedadas e variaveis: 1 arquivo por familia cobre todos os pesos
+// (o navegador so baixa o subset latin, via unicode-range).
+import "@fontsource-variable/inter/wght.css";
+import "@fontsource-variable/outfit/wght.css";
 import App from "./App.tsx";
 import "./index.css";
 

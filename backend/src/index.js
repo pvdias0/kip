@@ -14,7 +14,7 @@ import {
   passwordResetLimiter,
 } from "./middleware/rateLimiter.js";
 import { initializeSocket } from "./utils/socket.js";
-import { serveSpa } from "./utils/spa.js";
+import { inlineScriptHashes, serveSpa } from "./utils/spa.js";
 import authRoutes from "./routes/auth.js";
 import categoriesRoutes from "./routes/categories.js";
 import entriesRoutes from "./routes/entries.js";
@@ -78,6 +78,9 @@ console.log("Trust proxy:", trustProxySetting);
 initializeSocket(httpServer);
 app.set("trust proxy", trustProxySetting);
 
+const frontendPath = path.join(__dirname, "../../frontend/dist");
+const frontendEntryPoint = path.join(frontendPath, "index.html");
+
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -89,6 +92,8 @@ app.use(
         // Microsoft Clarity e Cloudflare Web Analytics estavam sendo bloqueados
         scriptSrc: [
           "'self'",
+          // script de boot inline do index.html (tema + sessao antes da 1a pintura)
+          ...inlineScriptHashes(frontendPath),
           "https://www.clarity.ms",
           "https://scripts.clarity.ms",
           "https://static.cloudflareinsights.com",
@@ -168,8 +173,6 @@ app.use("/api/payment-methods", paymentMethodsRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/finance", financeRoutes);
 
-const frontendPath = path.join(__dirname, "../../frontend/dist");
-const frontendEntryPoint = path.join(frontendPath, "index.html");
 
 if (existsSync(frontendEntryPoint)) {
   serveSpa(app, frontendPath);

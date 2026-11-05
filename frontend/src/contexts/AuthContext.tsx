@@ -29,7 +29,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Sem token salvo nao ha nada para carregar: a landing renderiza no primeiro
+  // commit (sem piscar o loader por cima do HTML pre-renderizado).
+  const [isLoading, setIsLoading] = useState(
+    () => typeof window === "undefined" || Boolean(localStorage.getItem("auth_token")),
+  );
   const [error, setError] = useState<string | null>(null);
 
   const setUserData = useCallback((userData: User | null) => {

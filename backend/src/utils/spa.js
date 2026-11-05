@@ -1,5 +1,6 @@
 import express from "express";
-import { readFileSync } from "fs";
+import { createHash } from "crypto";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
 
 const SITE_URL = "https://kip.pvapps.com.br";
@@ -87,6 +88,25 @@ function renderForRoute(baseHtml, routePath) {
   return html;
 }
 
+// Landing pre-renderizada no build (frontend/scripts/prerender.mjs). So a home
+// a recebe; nas demais rotas o shell e removido para nao exibir a landing.
+const SHELL_PATTERN = /<!--shell:start-->[\s\S]*?<!--shell:end-->/;
+const stripShell = (html) => html.replace(SHELL_PATTERN, "");
+
+/**
+ * Hashes (CSP) dos scripts inline marcados com data-inline-boot no index.html.
+ * Calculados a partir do build real, entao nao ficam desatualizados.
+ */
+export function inlineScriptHashes(frontendPath) {
+  const entryPoint = path.join(frontendPath, "index.html");
+  if (!existsSync(entryPoint)) return [];
+
+  const html = readFileSync(entryPoint, "utf8");
+  return [...html.matchAll(/<script data-inline-boot>([\s\S]*?)<\/script>/g)].map(
+    ([, code]) => `'sha256-${createHash("sha256").update(code, "utf8").digest("base64")}'`,
+  );
+}
+
 const normalizePath = (requestPath) =>
   requestPath.length > 1 ? requestPath.replace(/\/+$/, "") : requestPath;
 
@@ -99,9 +119,12 @@ export function serveSpa(app, frontendPath) {
   const baseHtml = readFileSync(entryPoint, "utf8");
 
   const pages = new Map(
-    Object.keys(PUBLIC_ROUTES).map((route) => [route, renderForRoute(baseHtml, route)]),
+    Object.keys(PUBLIC_ROUTES).map((route) => [
+      route,
+      renderForRoute(route === "/" ? baseHtml : stripShell(baseHtml), route),
+    ]),
   );
-  const noindexHtml = baseHtml.replace(
+  const noindexHtml = stripShell(baseHtml).replace(
     /<link rel="canonical" href="[^"]*"\s*\/>/,
     '<meta name="robots" content="noindex" />',
   );

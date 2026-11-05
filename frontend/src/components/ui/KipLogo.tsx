@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface KipLogoProps {
@@ -6,6 +5,8 @@ interface KipLogoProps {
     animated?: boolean;
     className?: string;
     showText?: boolean;
+    /** false = sem animacao de entrada (usado na landing pre-renderizada). */
+    entrance?: boolean;
 }
 
 const sizeMap = {
@@ -19,7 +20,8 @@ export function KipLogo({
     size = 'md',
     animated = true,
     className,
-    showText = true
+    showText = true,
+    entrance = true,
 }: KipLogoProps) {
     const { icon: iconSize, text: textSize } = sizeMap[size];
 
@@ -99,34 +101,31 @@ export function KipLogo({
         );
     }
 
+    // Animacoes em CSS (tailwindcss-animate) em vez de framer-motion, para o logo
+    // nao puxar a biblioteca para o bundle principal da landing.
     return (
-        <motion.div
-            className={cn("flex items-center gap-3", className)}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+        <div
+            className={cn(
+                "flex items-center gap-3",
+                entrance && "animate-in fade-in zoom-in-90 duration-500 ease-out",
+                className
+            )}
         >
-            <motion.div
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            >
+            <div className="transition-transform duration-200 ease-out hover:rotate-[5deg] hover:scale-105 active:scale-95 motion-reduce:transform-none">
                 <LogoIcon />
-            </motion.div>
+            </div>
             {showText && (
-                <motion.span
+                <span
                     className={cn(
                         "font-display font-bold tracking-tight text-primary",
+                        entrance && "animate-in fade-in slide-in-from-left-2 delay-200 duration-500 fill-mode-backwards",
                         textSize
                     )}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
                 >
                     KIP
-                </motion.span>
+                </span>
             )}
-        </motion.div>
+        </div>
     );
 }
 

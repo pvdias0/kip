@@ -13,7 +13,9 @@ ARG VITE_SOCKET_URL=
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_SOCKET_URL=$VITE_SOCKET_URL
 
-RUN npm run build
+# NODE_ENV=production no build: com "development" o Vite empacota a versao de
+# desenvolvimento do React (bundle ~50% maior, mais lento e com avisos no console).
+RUN NODE_ENV=production npm run build
 
 FROM node:20-alpine
 

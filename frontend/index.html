@@ -13,6 +13,12 @@
     <link rel="icon" type="image/svg+xml" href="/kip-icon.svg?v=2" />
     <link rel="apple-touch-icon" href="/kip-icon.svg?v=2" />
 
+    <!-- Antes da primeira pintura: aplica o tema salvo e esconde a landing
+         pre-renderizada se houver sessao (o React mostra o app em seguida).
+         O hash deste script e liberado na CSP pelo backend (utils/spa.js). -->
+    <script data-inline-boot>try{var d=document.documentElement;if(localStorage.getItem("kip-theme")==="dark"){d.classList.add("dark");d.style.colorScheme="dark"}if(localStorage.getItem("auth_token"))d.classList.add("has-session")}catch(e){}</script>
+    <style>html.has-session [data-app-shell]{display:none}</style>
+
     <!-- Imagem LCP do hero: descoberta já no HTML, só a do breakpoint atual -->
     <link rel="preload" as="image" type="image/webp" href="/hero/lp-mobile.webp" media="(max-width: 767px)" fetchpriority="high" />
     <link rel="preload" as="image" type="image/webp" href="/hero/lp-tablet.webp" media="(min-width: 768px) and (max-width: 1023px)" fetchpriority="high" />
@@ -52,7 +58,7 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root"><!--app-shell--></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

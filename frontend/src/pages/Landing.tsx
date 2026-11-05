@@ -13,45 +13,11 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { Reveal, revealDelay, revealItem } from "@/components/landing/Reveal";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const Landing = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  };
-
-  // O container do hero nao anima a propria opacidade: a imagem de fundo e o
-  // elemento LCP e precisa aparecer imediatamente. So os filhos animam.
-  const heroContainerVariants = {
-    hidden: {},
-    visible: {
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5,
-      },
-    },
-  };
 
   const features = [
     {
@@ -127,7 +93,7 @@ const Landing = () => {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center gap-2">
-              <KipLogo />
+              <KipLogo entrance={false} />
             </div>
 
             {/* Desktop Navigation */}
@@ -173,12 +139,7 @@ const Landing = () => {
 
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="md:hidden pt-4 pb-4 flex flex-col gap-4"
-            >
+            <div className="md:hidden pt-4 pb-4 flex flex-col gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <a
                 href="#features"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -199,19 +160,16 @@ const Landing = () => {
                 </Button>
               </Link>
               <ThemeToggle showLabel className="w-full justify-center" />
-            </motion.div>
+            </div>
           )}
         </div>
       </header>
 
       {/* Hero Section */}
       <section className="relative isolate overflow-hidden">
-        <motion.div
-          variants={heroContainerVariants}
-          initial="hidden"
-          animate="visible"
-          className="relative min-h-[calc(100vh-4.5rem)] text-center"
-        >
+        {/* Hero sem animacao de entrada: vem pre-renderizado no HTML
+            (scripts/prerender.mjs) e contem o elemento LCP. */}
+        <div className="relative min-h-[calc(100vh-4.5rem)] text-center">
           {/* Imagem de fundo do hero: <picture> com WebP para o navegador
               descobrir cedo (preload no index.html) e baixar so a versao do breakpoint. */}
           <picture className="absolute inset-0">
@@ -220,10 +178,11 @@ const Landing = () => {
             <img
               src="/hero/lp-mobile.webp"
               alt=""
-              width={828}
-              height={1471}
-              fetchPriority="high"
-              decoding="async"
+              width={720}
+              height={1279}
+              // React 18 nao conhece a prop fetchPriority (avisa no console);
+              // o atributo HTML em minusculas funciona igual.
+              {...{ fetchpriority: "high" }}
               className="h-full w-full object-cover object-center"
             />
           </picture>
@@ -233,15 +192,14 @@ const Landing = () => {
           <div className="relative z-10 container mx-auto flex min-h-[calc(100vh-4.5rem)] items-center px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
             <div className="mx-auto max-w-4xl">
           {/* Badge */}
-          <motion.div variants={itemVariants} className="mb-6">
+          <div className="mb-6">
             <span className="inline-block bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium">
               ✨ Gestão Financeira Simplificada
             </span>
-          </motion.div>
+          </div>
 
           {/* Heading */}
-          <motion.h1
-            variants={itemVariants}
+          <h1
             className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight"
           >
             Controle Suas Finanças
@@ -249,21 +207,19 @@ const Landing = () => {
               {" "}
               com Simplicidade
             </span>
-          </motion.h1>
+          </h1>
 
           {/* Subheading */}
-          <motion.p
-            variants={itemVariants}
+          <p
             className="text-base sm:text-lg text-muted-foreground mb-8 max-w-2xl mx-auto"
           >
             <span className="text-primary font-semibold">KIP</span> é uma plataforma intuitiva para gerenciar suas receitas, despesas
             e categorias financeiras. Tenha insights claros sobre sua saúde
             financeira com análises em tempo real.
-          </motion.p>
+          </p>
 
           {/* CTA Buttons */}
-          <motion.div
-            variants={itemVariants}
+          <div
             className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12"
           >
             <Link to="/login" className="w-full sm:w-auto">
@@ -277,11 +233,10 @@ const Landing = () => {
                 Criar Conta
               </Button>
             </Link>
-          </motion.div>
+          </div>
 
           {/* Hero Image/Illustration */}
-          <motion.div
-            variants={itemVariants}
+          <div
             className="rounded-[1.5rem] border border-white/25 bg-background/45 p-6 backdrop-blur-md sm:p-8 lg:p-12 dark:border-white/10 dark:bg-background/40"
           >
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
@@ -311,24 +266,18 @@ const Landing = () => {
                 </p>
               </div>
             </div>
-          </motion.div>
+          </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* Features Section */}
       <section id="features" className="py-12 sm:py-20 lg:py-32 bg-card/30">
         <div className="container mx-auto px-4">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="max-w-4xl mx-auto"
-          >
+          <Reveal className="max-w-4xl mx-auto">
             {/* Section Header */}
-            <motion.div variants={itemVariants} className="text-center mb-12 sm:mb-16 lg:mb-20">
+            <div className={revealItem("text-center mb-12 sm:mb-16 lg:mb-20")} style={revealDelay(0)}>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
                 Recursos Poderosos
               </h2>
@@ -336,17 +285,17 @@ const Landing = () => {
                 Tudo que você precisa para gerenciar suas finanças pessoais com
                 facilidade
               </p>
-            </motion.div>
+            </div>
 
             {/* Features Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
               {features.map((feature, index) => {
                 const Icon = feature.icon;
                 return (
-                  <motion.div
+                  <div
                     key={index}
-                    variants={itemVariants}
-                    className="bg-background border border-border rounded-lg p-6 sm:p-8 hover:border-primary/50 transition-all hover:shadow-lg"
+                    style={revealDelay(index + 1)}
+                    className="reveal-item bg-background border border-border rounded-lg p-6 sm:p-8 hover:border-primary/50 transition-all hover:shadow-lg"
                   >
                     <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                       <Icon className="w-6 h-6 text-primary" />
@@ -357,41 +306,35 @@ const Landing = () => {
                     <p className="text-sm sm:text-base text-muted-foreground">
                       {feature.description}
                     </p>
-                  </motion.div>
+                  </div>
                 );
               })}
             </div>
-          </motion.div>
+          </Reveal>
         </div>
       </section>
 
       {/* How It Works Section */}
       <section id="how-it-works" className="py-12 sm:py-20 lg:py-32 bg-background">
         <div className="container mx-auto px-4">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="max-w-5xl mx-auto"
-          >
+          <Reveal className="max-w-5xl mx-auto">
             {/* Section Header */}
-            <motion.div variants={itemVariants} className="text-center mb-12 sm:mb-16 lg:mb-20">
+            <div className={revealItem("text-center mb-12 sm:mb-16 lg:mb-20")} style={revealDelay(0)}>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4">
                 Como Funciona
               </h2>
               <p className="text-muted-foreground text-base sm:text-lg">
                 Comece em 4 passos simples
               </p>
-            </motion.div>
+            </div>
 
             {/* Steps Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-6 lg:gap-8">
               {steps.map((step, index) => (
                 <div key={index} className="relative">
-                  <motion.div
-                    variants={itemVariants}
-                    className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg p-6 sm:p-8 border border-primary/20 h-full"
+                  <div
+                    style={revealDelay(index + 1)}
+                    className="reveal-item bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg p-6 sm:p-8 border border-primary/20 h-full"
                   >
                     <div className="text-4xl sm:text-5xl font-bold text-primary/30 mb-4">
                       {step.number}
@@ -402,7 +345,7 @@ const Landing = () => {
                     <p className="text-sm sm:text-base text-muted-foreground">
                       {step.description}
                     </p>
-                  </motion.div>
+                  </div>
 
                   {/* Connection line (hidden on mobile and tablet) */}
                   {(index === 0 || index === 2) && (
@@ -413,37 +356,22 @@ const Landing = () => {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </Reveal>
         </div>
       </section>
 
       {/* CTA Section */}
       <section className="py-12 sm:py-20 lg:py-32 bg-gradient-to-r from-primary/10 to-accent/10 border-y border-primary/20">
         <div className="container mx-auto px-4">
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            className="max-w-3xl mx-auto text-center"
-          >
-            <motion.h2
-              variants={itemVariants}
-              className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6"
-            >
+          <Reveal className="max-w-3xl mx-auto text-center">
+            <h2 className="reveal-item text-3xl sm:text-4xl lg:text-5xl font-bold mb-6" style={revealDelay(0)}>
               Pronto para Controlar Suas Finanças?
-            </motion.h2>
-            <motion.p
-              variants={itemVariants}
-              className="text-base sm:text-lg text-muted-foreground mb-8"
-            >
+            </h2>
+            <p className="reveal-item text-base sm:text-lg text-muted-foreground mb-8" style={revealDelay(1)}>
               Comece gratuitamente agora e descubra como é fácil gerenciar suas
               finanças com KIP.
-            </motion.p>
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-            >
+            </p>
+            <div className="reveal-item flex flex-col sm:flex-row gap-4 justify-center items-center" style={revealDelay(2)}>
               <Link to="/login" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full sm:w-auto">
                   Acessar Plataforma
@@ -455,8 +383,8 @@ const Landing = () => {
                   Registre-se Agora
                 </Button>
               </Link>
-            </motion.div>
-          </motion.div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -468,7 +396,7 @@ const Landing = () => {
               {/* Brand */}
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <KipLogo />
+                  <KipLogo entrance={false} />
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Controle suas finanças com simplicidade e segurança

@@ -13,8 +13,8 @@
   :root {
     color-scheme: light;
     /* Typography */
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+    --font-sans: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
+    --font-display: 'Outfit Variable', 'Outfit', 'Inter Variable', system-ui, sans-serif;
 
     /* Light Theme - Premium Finance Palette */
     --background: 220 25% 97%;
@@ -524,5 +524,41 @@
 
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* Landing: revelar ao rolar (componente <Reveal>). Substitui o framer-motion na
+   landing. Seletor com atributo para vencer utilitarios como transition-all. */
+[data-reveal] .reveal-item {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  transition-delay:
+    calc(0.2s + var(--reveal-i, 0) * 0.1s),
+    calc(0.2s + var(--reveal-i, 0) * 0.1s),
+    0s,
+    0s;
+}
+
+[data-reveal][data-visible] .reveal-item {
+  opacity: 1;
+  transform: none;
+}
+
+/* HTML pre-renderizado (antes do JS) e quem prefere menos movimento: tudo visivel. */
+[data-app-shell] [data-reveal] .reveal-item {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] .reveal-item {
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
